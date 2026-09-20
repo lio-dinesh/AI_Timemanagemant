@@ -1,7 +1,12 @@
 import os
 import json
 import re
+import logging
+import requests
 from django.conf import settings
+
+logger = logging.getLogger('apps.ai.llm')
+
 
 class BaseLLMProvider:
     def complete(self, prompt: str, system: str = "") -> str:
@@ -41,13 +46,110 @@ class MockLLMProvider(BaseLLMProvider):
         })
 
 
+class GeminiLLMProvider(BaseLLMProvider):
+    """
+    Google Gemini LLM provider using the Google Generative Language REST API.
+    Defaults to models/gemini-3.6-flash with graceful fallback to mock on network failure.
+    """
+    def __init__(self, api_key: str, model: str = None):
+        self.api_key = api_key
+        self.model = model or getattr(settings, 'GEMINI_MODEL', 'gemini-3.6-flash')
+        self.fallback = MockLLMProvider()
+
+    def complete(self, prompt: str, system: str = "") -> str:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent?key={self.api_key}"
+
+        payload = {
+            "contents": [
+                {
+                    "parts": [{"text": prompt}]
+                }
+            ]
+        }
+
+        if system:
+            payload["systemInstruction"] = {
+                "parts": [{"text": system}]
+            }
+
+        headers = {
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=12)
+            if response.status_code == 200:
+                data = response.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        text_response = parts[0].get("text", "").strip()
+                        # Clean markdown json fences if present
+                        if text_response.startswith("```json") and text_response.endswith("```"):
+                            text_response = text_response[7:-3].strip()
+                        elif text_response.startswith("```") and text_response.endswith("```"):
+                            text_response = text_response[3:-3].strip()
+                        return text_response
+
+            logger.warning("Gemini API call failed (%s): %s. Falling back to Mock.", response.status_code, response.text[:200])
+        except Exception as exc:
+            logger.warning("Gemini API exception (%s). Falling back to Mock.", exc)
+
+        return self.fallback.complete(prompt, system)
+
+
+class OpenAILLMProvider(BaseLLMProvider):
+    """
+    OpenAI LLM provider using the OpenAI Chat Completions REST API.
+    """
+    def __init__(self, api_key: str, model: str = "gpt-4o-mini"):
+        self.api_key = api_key
+        self.model = model
+        self.fallback = MockLLMProvider()
+
+    def complete(self, prompt: str, system: str = "") -> str:
+        url = "https://api.openai.com/v1/chat/completions"
+        messages = []
+        if system:
+            messages.append({"role": "system", "content": system})
+        messages.append({"role": "user", "content": prompt})
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.post(
+                url,
+                json={"model": self.model, "messages": messages, "temperature": 0.2},
+                headers=headers,
+                timeout=12
+            )
+            if response.status_code == 200:
+                data = response.json()
+                choices = data.get("choices", [])
+                if choices:
+                    return choices[0].get("message", {}).get("content", "").strip()
+            logger.warning("OpenAI API call failed (%s). Falling back to Mock.", response.status_code)
+        except Exception as exc:
+            logger.warning("OpenAI API exception (%s). Falling back to Mock.", exc)
+
+        return self.fallback.complete(prompt, system)
+
+
 def get_llm_provider() -> BaseLLMProvider:
     provider_name = getattr(settings, 'AI_PROVIDER', 'mock').lower()
     api_key = getattr(settings, 'AI_API_KEY', '') or os.environ.get('AI_API_KEY', '')
 
-    # Return Mock if no API key is present
     if not api_key or provider_name == 'mock':
         return MockLLMProvider()
 
-    # Placeholders for pluggable providers
+    if provider_name == 'gemini':
+        return GeminiLLMProvider(api_key=api_key)
+
+    if provider_name == 'openai':
+        return OpenAILLMProvider(api_key=api_key)
+
     return MockLLMProvider()

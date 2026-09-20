@@ -3,12 +3,29 @@ from datetime import timedelta
 from django.test import TestCase
 from django.utils import timezone
 from apps.accounts.models import User
-from apps.tracking.models import TimeEntry, TimeEntryStatus
+from apps.tracking.models import TimeEntry, TimeEntryStatus, ProductivityCategory
 from apps.tracking.services.timer import TimerService, TimerConflictError, TimerNotFoundError
+from apps.tracking.services.classifier import ProductivityClassifier
 
 class TrackingTestCase(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(email='tracker@example.com', username='tracker', password='pwd')
+
+    def test_ml_productivity_classifier(self):
+        # Productive coding activity
+        cat, conf = ProductivityClassifier.classify(activity_type="Python django backend coding", app_name="vscode")
+        self.assertEqual(cat, ProductivityCategory.PRODUCTIVE)
+        self.assertGreaterEqual(conf, 0.45)
+
+        # Distraction activity
+        cat, conf = ProductivityClassifier.classify(activity_type="Watching youtube reels and funny shorts", app_name="chrome")
+        self.assertEqual(cat, ProductivityCategory.DISTRACTION)
+        self.assertGreaterEqual(conf, 0.45)
+
+        # Neutral meeting activity
+        cat, conf = ProductivityClassifier.classify(activity_type="Slack team standup call", app_name="slack")
+        self.assertEqual(cat, ProductivityCategory.NEUTRAL)
+        self.assertGreaterEqual(conf, 0.40)
 
     def test_start_timer_success(self):
         entry = TimerService.start_timer(user=self.user, activity_type="Django Coding")

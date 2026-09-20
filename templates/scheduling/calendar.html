@@ -8,9 +8,14 @@
     <h3 class="fw-bold m-0">Schedule & Calendar</h3>
     <p class="text-muted small m-0">Unified schedule for tasks, meetings, focus sessions, and breaks</p>
   </div>
-  <a href="{% url 'create_event' %}" class="btn btn-primary btn-sm">
-    <i class="bi bi-calendar-plus me-1"></i> Add Event
-  </a>
+  <div class="d-flex gap-2">
+    <a href="{% url 'export_calendar_ics' %}" class="btn btn-outline-secondary btn-sm" title="Export schedule to Google Calendar, Outlook, and Apple Calendar">
+      <i class="bi bi-calendar-check me-1"></i> Export iCal (.ics)
+    </a>
+    <a href="{% url 'create_event' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-calendar-plus me-1"></i> Add Event
+    </a>
+  </div>
 </div>
 
 <div class="card shadow-sm mb-4">
@@ -51,6 +56,23 @@
                 <i class="bi bi-camera-video me-1"></i> Join
               </a>
             {% endif %}
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Sync with Google or Outlook">
+                <i class="bi bi-calendar-event me-1"></i> Sync
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li>
+                  <a class="dropdown-item small d-flex align-items-center gap-2" href="https://calendar.google.com/calendar/render?action=TEMPLATE&text={{ event.title|urlencode }}&dates={{ event.start_at|date:'Ymd\THis\Z' }}/{{ event.end_at|date:'Ymd\THis\Z' }}&details={{ event.description|default:event.title|urlencode }}&location={{ event.location|default:event.meeting_url|urlencode }}" target="_blank">
+                    <i class="bi bi-google text-danger"></i> Add to Google Calendar
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item small d-flex align-items-center gap-2" href="https://outlook.live.com/calendar/0/deeplink/compose?path=%2Fcalendar%2Faction%2Fcompose&rru=addevent&subject={{ event.title|urlencode }}&startdt={{ event.start_at|date:'c' }}&enddt={{ event.end_at|date:'c' }}&body={{ event.description|default:event.title|urlencode }}&location={{ event.location|default:event.meeting_url|urlencode }}" target="_blank">
+                    <i class="bi bi-microsoft text-primary"></i> Add to Outlook
+                  </a>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       {% empty %}

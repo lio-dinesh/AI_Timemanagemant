@@ -3,11 +3,12 @@ import datetime
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from apps.scheduling.models import ScheduleEvent, ScheduleEventType, ScheduleEventStatus
 from apps.scheduling.forms import ScheduleEventForm
 from apps.scheduling.services.scheduler import ScheduleService, ConflictError
+from apps.scheduling.services.calendar_sync import CalendarSyncService
 
 @login_required
 def calendar_view(request):
@@ -87,3 +88,38 @@ def api_check_conflict(request):
         })
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+@login_required
+def export_calendar_ics(request):
+    """
+    Downloads an RFC 5545 iCalendar (.ics) file containing the user's schedule events.
+    Can be directly imported into Google Calendar, Microsoft Outlook, or Apple Calendar.
+    """
+    now = timezone.now()
+    # Export events from past 30 days to upcoming 90 days
+    start = now - datetime.timedelta(days=30)
+    end = now + datetime.timedelta(days=90)
+    events = ScheduleService.get_user_schedule(request.user, start, end)
+
+    ics_content = CalendarSyncService.generate_ics_content(
+        events, calendar_name=f"{request.user.get_full_name() or request.user.username}'s AI TimeSync Calendar"
+    )
+
+    response = HttpResponse(ics_content, content_type="text/calendar; charset=utf-8")
+    response["Content-Disposition"] = f'attachment; filename="ai_timesync_schedule_{now.strftime("%Y%m%d")}.ics"'
+    return response
+
+
+@login_required
+def api_event_calendar_links(request, event_id):
+    """
+    Returns 1-click web intent URLs to add a specific event to Google Calendar or Outlook Web.
+    """
+    event = get_object_or_404(ScheduleEvent, id=event_id, user=request.user)
+    return JsonResponse({
+        "status": "success",
+        "google_url": CalendarSyncService.get_google_calendar_url(event),
+        "outlook_url": CalendarSyncService.get_outlook_calendar_url(event),
+        "title": event.title,
+    })

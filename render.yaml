@@ -1,0 +1,110 @@
+services:
+  # 1. Main Django Web Application
+  - type: web
+    name: ai-timesync-web
+    runtime: python
+    buildCommand: ./build.sh
+    startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 3
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: "False"
+      - key: SECURE_SSL_REDIRECT
+        value: "True"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        value: liodinesh1905@gmail.com
+      - key: BREVO_SENDER_NAME
+        value: "AI Time Management"
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ai-timesync-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: ai-timesync-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: ai-timesync-redis
+          property: connectionString
+
+  # 2. Celery Distributed Background Worker
+  - type: worker
+    name: ai-timesync-worker
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A config worker --loglevel=info --concurrency=2
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_SENDER_EMAIL
+        value: liodinesh1905@gmail.com
+      - key: AI_PROVIDER
+        value: gemini
+      - key: AI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ai-timesync-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: ai-timesync-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: redis
+          name: ai-timesync-redis
+          property: connectionString
+
+  # 3. Celery Beat Periodic Scheduler (Reminders, Anomaly Scans)
+  - type: worker
+    name: ai-timesync-beat
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A config beat --loglevel=info
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.production
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: ai-timesync-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: redis
+          name: ai-timesync-redis
+          property: connectionString
+
+  # 4. Managed Redis Service for Caching & Task Queues
+  - type: redis
+    name: ai-timesync-redis
+    ipAllowList: []
+    plan: free

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -171,6 +172,7 @@ BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email'
 # AI Provider Configuration
 AI_PROVIDER = os.environ.get('AI_PROVIDER', 'mock')
 AI_API_KEY = os.environ.get('AI_API_KEY', '')
+GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.6-flash')
 
 # Structured Logging
 LOGGING = {
