@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}System Administration - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold m-0">System Administration</h3>
+    <p class="text-muted small m-0">Platform health, notification deliverability, and security telemetry</p>
+  </div>
+  <a href="{% url 'audit_list' %}" class="btn btn-outline-danger btn-sm">
+    <i class="bi bi-shield-shaded me-1"></i> Security Trail
+  </a>
+</div>
+
+<!-- Admin KPIs -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-primary">
+      <div>
+        <div class="kpi-label">Total Users</div>
+        <div class="kpi-value text-primary">{{ metrics.total_users }}</div>
+      </div>
+      <i class="bi bi-people fs-1 text-primary opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-success">
+      <div>
+        <div class="kpi-label">Active Users</div>
+        <div class="kpi-value text-success">{{ metrics.active_users }}</div>
+      </div>
+      <i class="bi bi-person-check fs-1 text-success opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-info">
+      <div>
+        <div class="kpi-label">Total Tasks</div>
+        <div class="kpi-value text-info">{{ metrics.total_tasks }}</div>
+      </div>
+      <i class="bi bi-card-checklist fs-1 text-info opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 {% if metrics.notifs_today.failed > 0 %}border-danger{% else %}border-secondary{% endif %}">
+      <div>
+        <div class="kpi-label">Today's Failed Emails</div>
+        <div class="kpi-value {% if metrics.notifs_today.failed > 0 %}text-danger{% else %}text-muted{% endif %}">
+          {{ metrics.notifs_today.failed|default:0 }}
+        </div>
+      </div>
+      <i class="bi bi-envelope-exclamation fs-1 text-danger opacity-25"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Security Events -->
+<div class="card shadow-sm mb-4 border-danger border-opacity-25">
+  <div class="card-header bg-danger bg-opacity-10 text-danger fw-bold d-flex justify-content-between align-items-center">
+    <span><i class="bi bi-shield-exclamation me-1"></i> Recent Security & Authentication Events</span>
+    <a href="{% url 'audit_list' %}" class="small text-danger text-decoration-none">Full Audit Trail</a>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Timestamp</th>
+            <th>Action</th>
+            <th>User / Actor</th>
+            <th>IP Address</th>
+            <th>Status</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ev in metrics.recent_security_events %}
+            <tr>
+              <td class="small text-muted">{{ ev.created_at|date:"Y-m-d H:i:s" }}</td>
+              <td><span class="badge bg-dark">{{ ev.action }}</span></td>
+              <td>{{ ev.user.email|default:"Anonymous" }}</td>
+              <td><code>{{ ev.ip_address|default:"-" }}</code></td>
+              <td>
+                <span class="badge {% if ev.status == 'SUCCESS' %}bg-success{% else %}bg-danger{% endif %}">
+                  {{ ev.status }}
+                </span>
+              </td>
+              <td class="small text-muted">{{ ev.reason|default:"-" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="6" class="text-center py-3 text-muted">No security alert events logged recently.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

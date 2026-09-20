@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold m-0">Notification Center</h3>
+    <p class="text-muted small m-0">In-app alerts, meeting reminders, and task deadline updates</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'notification_analytics' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-graph-up me-1"></i> Delivery Analytics
+    </a>
+    <form method="post" action="{% url 'mark_all_as_read' %}" class="m-0">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-check2-all me-1"></i> Mark All as Read
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- Tabs for Unread vs All -->
+<ul class="nav nav-tabs mb-4">
+  <li class="nav-item">
+    <a class="nav-link {% if not filter_status %}active{% endif %}" href="{% url 'notification_list' %}">All Notifications</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {% if filter_status == 'unread' %}active{% endif %}" href="{% url 'notification_list' %}?status=unread">
+      Unread Only
+      {% if unread_notifications_count > 0 %}
+        <span class="badge bg-danger rounded-pill ms-1">{{ unread_notifications_count }}</span>
+      {% endif %}
+    </a>
+  </li>
+</ul>
+
+<div class="card shadow-sm">
+  <div class="list-group list-group-flush">
+    {% for notif in notifications %}
+      <div class="list-group-item p-3 d-flex justify-content-between align-items-center {% if not notif.read_at %}bg-light{% endif %}">
+        <div class="d-flex align-items-center gap-3">
+          <div class="p-2 rounded-circle bg-white border text-primary">
+            {% if 'DEADLINE' in notif.notification_type %}
+              <i class="bi bi-exclamation-octagon fs-5 text-danger"></i>
+            {% elif 'MEETING' in notif.notification_type %}
+              <i class="bi bi-calendar-event fs-5 text-warning"></i>
+            {% elif 'AI' in notif.notification_type %}
+              <i class="bi bi-robot fs-5 text-info"></i>
+            {% else %}
+              <i class="bi bi-bell fs-5"></i>
+            {% endif %}
+          </div>
+          <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+              <span class="badge {% if notif.priority == 'URGENT' %}bg-danger{% elif notif.priority == 'HIGH' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                {{ notif.priority }}
+              </span>
+              <span class="text-muted small">{{ notif.scheduled_for|timesince }} ago</span>
+            </div>
+            <h6 class="fw-bold mb-1">{{ notif.title }}</h6>
+            <p class="small text-muted mb-0">{{ notif.message }}</p>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2" id="notif-action-{{ notif.id }}">
+          {% if not notif.read_at %}
+            <button hx-post="{% url 'mark_as_read' notif.id %}" hx-target="#notif-action-{{ notif.id }}" hx-swap="outerHTML" class="btn btn-sm btn-outline-primary">
+              Mark Read
+            </button>
+          {% else %}
+            <span class="badge bg-light text-muted border">Read</span>
+          {% endif %}
+        </div>
+      </div>
+    {% empty %}
+      <div class="text-center py-5 text-muted">
+        No notifications to display.
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

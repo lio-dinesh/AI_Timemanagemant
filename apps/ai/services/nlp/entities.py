@@ -1,0 +1,105 @@
+import re
+from typing import Dict, Any, Optional
+from apps.ai.schemas import EntitySchema
+from .date_time import DateTimeNormalizer
+
+
+class EntityExtractor:
+    @staticmethod
+    def extract_entities(text: str, user, intent: Optional[str] = None) -> EntitySchema:
+        """
+        Extracts structured entities from natural language text.
+        """
+        entities = EntitySchema()
+        lower = text.lower()
+
+        # 1. Dates and Times
+        d_obj, d_str = DateTimeNormalizer.normalize_date(text, user)
+        if d_str:
+            entities.date = d_str
+
+        t_obj, window = DateTimeNormalizer.normalize_time(text, user)
+        if t_obj:
+            entities.start_time = t_obj.strftime("%H:%M")
+        if window:
+            entities.time_window = window
+
+        # 2. Duration
+        duration = DateTimeNormalizer.normalize_duration(text)
+        if duration:
+            entities.duration_minutes = duration
+
+        # 3. Period
+        entities.period = DateTimeNormalizer.normalize_period(text)
+
+        # 4. Task ID extraction (e.g. "task #4", "task 12", "id 5")
+        id_match = re.search(r'\btask\s+(?:#|id\s*)?(\d+)\b', lower)
+        if not id_match:
+            id_match = re.search(r'\b#(\d+)\b', lower)
+        if id_match:
+            entities.task_id = int(id_match.group(1))
+
+        # 5. Task Title extraction
+        # e.g. "create a task called Finish Django API by tomorrow"
+        title_patterns = [
+            r'(?:task\s+called|task\s+named|named|called)\s+[\'"]?([a-zA-Z0-9_\-\s]+?)[\'"]?(?:\s+(?:by|due|for|at|with|on|tomorrow|today)|$)',
+            r'(?:create|add)\s+(?:a\s+)?(?:new\s+)?task\s+(?:to\s+)?([a-zA-Z0-9_\-\s]+?)(?:\s+(?:by|due|for|at|with|on|tomorrow|today)|$)',
+            r'(?:complete|finish|mark)\s+(?:the\s+)?(?:task\s+)?([a-zA-Z0-9_\-\s]+?)(?:\s+task|\s+as\s+completed|\s+as\s+done|$)',
+            r'(?:schedule)\s+(?:my\s+)?(?:task\s+)?([a-zA-Z0-9_\-\s]+?)(?:\s+task|\s+tomorrow|\s+today|\s+for|\s+at|$)',
+        ]
+        for pat in title_patterns:
+            m = re.search(pat, text, re.IGNORECASE)
+            if m:
+                extracted = m.group(1).strip()
+                # Clean filler words
+                extracted = re.sub(r'^(to\s+|my\s+|the\s+|task\s+)', '', extracted, flags=re.IGNORECASE).strip()
+                # Strip trailing time/date keywords
+                extracted = re.sub(r'\s+(tomorrow|today|tonight|at|by|due|for|with|on|urgent|priority.*)$', '', extracted, flags=re.IGNORECASE).strip()
+                if extracted and len(extracted) > 1:
+                    entities.task_title = extracted.title()
+                    break
+
+        # 6. Priority extraction (e.g. "high priority", "priority 8", "urgent", "low priority")
+        if "highest priority" in lower or "top priority" in lower or "critical" in lower:
+            entities.priority = 10
+        elif "urgent" in lower:
+            entities.priority = 9
+        elif "high priority" in lower:
+            entities.priority = 8
+        elif "medium priority" in lower or "normal priority" in lower:
+            entities.priority = 5
+        elif "low priority" in lower:
+            entities.priority = 2
+
+        num_priority = re.search(r'priority\s+(?:level\s*)?(\d{1,2})', lower)
+        if num_priority:
+            val = int(num_priority.group(1))
+            entities.priority = max(1, min(10, val))
+
+        # 7. Project Name extraction
+        proj_match = re.search(r'(?:project\s+called|project\s+named|project)\s+[\'"]?([a-zA-Z0-9_\-\s]+?)[\'"]?(?:\s+(?:by|due|for|at)|$)', text, re.IGNORECASE)
+        if proj_match:
+            p_name = proj_match.group(1).strip()
+            p_name = re.sub(r'^(to\s+|my\s+|the\s+)', '', p_name, flags=re.IGNORECASE).strip()
+            if p_name:
+                entities.project_title = p_name.title()
+
+        # 8. Reminders
+        if "remind" in lower or "alert" in lower or "notify" in lower:
+            rem_match = re.search(r'(\d+)\s*(?:min|mins|minutes?)\s+before', lower)
+            if rem_match:
+                entities.reminder_minutes = int(rem_match.group(1))
+            elif duration:
+                entities.reminder_minutes = duration
+            else:
+                entities.reminder_minutes = 30
+
+        # 9. Format (for reports)
+        if "csv" in lower:
+            entities.format = "CSV"
+        elif "json" in lower:
+            entities.format = "JSON"
+        elif "email" in lower:
+            entities.format = "EMAIL"
+
+        return entities

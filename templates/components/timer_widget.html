@@ -1,0 +1,27 @@
+<div id="active-timer-widget" class="d-inline-flex align-items-center gap-2">
+  {% if active_timer %}
+    <div class="timer-pill">
+      <span class="pulse-dot"></span>
+      <span id="live-timer-display" data-started-at="{{ active_timer.started_at|date:'c' }}">00:00:00</span>
+      {% if active_timer.task %}
+        <span class="text-muted d-none d-md-inline" style="font-size: 0.8rem; font-family: sans-serif;">
+          • {{ active_timer.task.title|truncatechars:20 }}
+        </span>
+      {% endif %}
+    </div>
+
+    <!-- Stop Timer Button via HTMX -->
+    <form hx-post="{% url 'stop_timer' %}" hx-target="#active-timer-widget" hx-swap="outerHTML" class="d-inline m-0">
+      {% csrf_token %}
+      <input type="hidden" name="idle_seconds" id="timer-idle-seconds-input" value="0">
+      <button type="submit" class="btn btn-sm btn-danger d-inline-flex align-items-center gap-1">
+        <i class="bi bi-stop-fill"></i> Stop
+      </button>
+    </form>
+  {% else %}
+    <div class="text-muted small d-flex align-items-center gap-2">
+      <span class="badge bg-secondary opacity-75">Idle</span>
+      <span class="d-none d-md-inline">No active timer running</span>
+    </div>
+  {% endif %}
+</div>

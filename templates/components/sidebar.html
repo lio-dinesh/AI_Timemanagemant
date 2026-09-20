@@ -1,0 +1,111 @@
+<div class="app-sidebar d-flex flex-column text-white">
+  <!-- Brand Header -->
+  <div class="p-3 pb-2 flex-shrink-0">
+    <a href="{% url 'user_dashboard' %}" class="d-flex align-items-center text-white text-decoration-none px-2">
+      <i class="bi bi-clock-history fs-3 text-primary me-2"></i>
+      <span class="fs-5 fw-bold">AI TimeSync</span>
+    </a>
+    <hr class="border-secondary opacity-25 mt-3 mb-0">
+  </div>
+
+  <!-- Scrollable Navigation Area -->
+  <div class="sidebar-nav px-3 py-2">
+    <ul class="nav nav-pills flex-column">
+      <li class="nav-item">
+        <a href="{% url 'user_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'user_dashboard' %}active{% endif %}">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'task_list' %}" class="nav-link {% if 'task' in request.path %}active{% endif %}">
+          <i class="bi bi-check2-square"></i> Tasks
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'project_list' %}" class="nav-link {% if 'project' in request.path %}active{% endif %}">
+          <i class="bi bi-folder"></i> Projects
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'calendar' %}" class="nav-link {% if 'schedule' in request.path %}active{% endif %}">
+          <i class="bi bi-calendar3"></i> Calendar
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'timer_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'timer_dashboard' %}active{% endif %}">
+          <i class="bi bi-stopwatch"></i> Timer Mode
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'time_history' %}" class="nav-link {% if request.resolver_match.url_name == 'time_history' %}active{% endif %}">
+          <i class="bi bi-journal-text"></i> Time History
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'ai_insights' %}" class="nav-link {% if 'ai' in request.path %}active{% endif %}">
+          <i class="bi bi-robot"></i> AI Insights
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'reports' %}" class="nav-link {% if 'reports' in request.path %}active{% endif %}">
+          <i class="bi bi-graph-up-arrow"></i> Reports
+        </a>
+      </li>
+      <li>
+        <a href="{% url 'notification_list' %}" class="nav-link {% if 'notification' in request.path %}active{% endif %}">
+          <i class="bi bi-bell"></i> Notifications
+          {% if unread_notifications_count > 0 %}
+            <span class="badge bg-danger rounded-pill ms-auto">{{ unread_notifications_count }}</span>
+          {% endif %}
+        </a>
+      </li>
+
+      {% if user.is_manager_role %}
+        <hr class="border-secondary opacity-25 my-2">
+        <li class="nav-item">
+          <span class="text-uppercase text-muted px-3 small fw-bold">Manager</span>
+        </li>
+        <li>
+          <a href="{% url 'manager_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}">
+            <i class="bi bi-people"></i> Team Productivity
+          </a>
+        </li>
+      {% endif %}
+
+      {% if user.is_admin_role %}
+        <hr class="border-secondary opacity-25 my-2">
+        <li class="nav-item">
+          <span class="text-uppercase text-muted px-3 small fw-bold">Administration</span>
+        </li>
+        <li>
+          <a href="{% url 'admin_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
+            <i class="bi bi-shield-lock"></i> Admin Dashboard
+          </a>
+        </li>
+        <li>
+          <a href="{% url 'audit_list' %}" class="nav-link {% if 'audit' in request.path %}active{% endif %}">
+            <i class="bi bi-file-earmark-text"></i> Security Audit Logs
+          </a>
+        </li>
+      {% endif %}
+    </ul>
+  </div>
+
+  <!-- Pinned Sidebar User Footer with Visible Sign Out Button -->
+  <div class="sidebar-footer p-3 border-top border-secondary border-opacity-25 bg-dark bg-opacity-50">
+    <div class="d-flex align-items-center justify-content-between">
+      <a href="{% url 'profile' %}" class="d-flex align-items-center text-white text-decoration-none text-truncate me-2" title="Profile & Preferences">
+        <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width: 34px; height: 34px; font-weight: 600;">
+          {{ user.first_name|default:user.username|slice:":1"|upper }}
+        </div>
+        <div class="d-flex flex-column text-truncate" style="max-width: 120px;">
+          <span class="fw-semibold small text-truncate">{{ user.get_full_name|default:user.username }}</span>
+          <span class="text-secondary small" style="font-size: 0.75rem;">{{ user.role }}</span>
+        </div>
+      </a>
+      <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger p-1 px-2 d-flex align-items-center gap-1 text-danger border-danger-subtle" title="Sign Out">
+        <i class="bi bi-box-arrow-right fs-6"></i>
+      </a>
+    </div>
+  </div>
+</div>

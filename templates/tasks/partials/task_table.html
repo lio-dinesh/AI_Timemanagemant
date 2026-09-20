@@ -1,0 +1,43 @@
+<div class="table-responsive">
+  <table class="table table-hover align-middle mb-0">
+    <thead class="table-light">
+      <tr>
+        <th>Task Title</th>
+        <th>Status</th>
+        <th>Priority</th>
+        <th>Progress</th>
+        <th>Actual / Est.</th>
+        <th>Deadline</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for task in page_obj %}
+        {% include 'tasks/partials/task_row.html' %}
+      {% empty %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-muted">No tasks match the selected criteria.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+  <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2">
+    <span class="small text-muted">Showing page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    <ul class="pagination pagination-sm m-0">
+      {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" hx-get="{% url 'task_list' %}?page={{ page_obj.previous_page_number }}&status={{ selected_status }}&project_id={{ selected_project }}" hx-target="#task-table-container">Previous</a>
+        </li>
+      {% endif %}
+      {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" hx-get="{% url 'task_list' %}?page={{ page_obj.next_page_number }}&status={{ selected_status }}&project_id={{ selected_project }}" hx-target="#task-table-container">Next</a>
+        </li>
+      {% endif %}
+    </ul>
+  </div>
+{% endif %}

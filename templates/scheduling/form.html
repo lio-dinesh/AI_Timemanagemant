@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h3 class="fw-bold m-0">{{ title }}</h3>
+      <a href="{% url 'calendar' %}" class="btn btn-outline-secondary btn-sm">Cancel</a>
+    </div>
+
+    <div class="card shadow-sm p-4">
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Event Title</label>
+          {{ form.title }}
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Event Type</label>
+            {{ form.event_type }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Associated Task (Optional)</label>
+            {{ form.task }}
+          </div>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Start Time</label>
+            {{ form.start_at }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">End Time</label>
+            {{ form.end_at }}
+          </div>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Reminder Minutes Before</label>
+            {{ form.reminder_minutes }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Location</label>
+            {{ form.location }}
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Meeting URL (Google Meet / Zoom)</label>
+          {{ form.meeting_url }}
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Description / Agenda</label>
+          {{ form.description }}
+        </div>
+        <button type="submit" class="btn btn-primary px-4 fw-semibold mt-2">
+          Save Event
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

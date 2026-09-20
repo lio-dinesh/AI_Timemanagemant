@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+
+{% block title %}Time Tracking History - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold m-0">Time Tracking History</h3>
+    <p class="text-muted small m-0">Review past focus sessions and logged time records</p>
+  </div>
+  <a href="{% url 'manual_entry' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i> Add Manual Entry
+  </a>
+</div>
+
+<!-- Date Filter -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body py-3">
+    <form method="get" class="row g-2 align-items-center">
+      <div class="col-auto">
+        <label class="small fw-semibold text-muted">Filter by Date:</label>
+      </div>
+      <div class="col-auto">
+        <input type="date" name="date" class="form-control form-control-sm" value="{{ selected_date }}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-sm btn-secondary">Filter</button>
+        {% if selected_date %}
+          <a href="{% url 'time_history' %}" class="btn btn-sm btn-link text-muted">Clear</a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card shadow-sm">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Session Date & Time</th>
+          <th>Task / Project</th>
+          <th>Duration</th>
+          <th>Active / Idle</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in page_obj %}
+          <tr>
+            <td>
+              <div class="fw-semibold">{{ entry.started_at|date:"M d, Y" }}</div>
+              <div class="text-muted small">{{ entry.started_at|date:"H:i" }} - {{ entry.ended_at|date:"H:i"|default:"In Progress" }}</div>
+            </td>
+            <td>
+              {% if entry.task %}
+                <a href="{% url 'task_detail' entry.task.id %}" class="fw-semibold text-decoration-none text-dark">{{ entry.task.title }}</a>
+                {% if entry.project %}
+                  <div class="text-muted small">{{ entry.project.name }}</div>
+                {% endif %}
+              {% else %}
+                <span class="text-muted fst-italic">{{ entry.activity_type }}</span>
+              {% endif %}
+            </td>
+            <td>
+              <span class="badge bg-light text-primary border fs-6">{{ entry.formatted_duration }}</span>
+            </td>
+            <td class="small text-muted">
+              <div>Active: {{ entry.active_seconds }}s</div>
+              <div>Idle: {{ entry.idle_seconds }}s</div>
+            </td>
+            <td>
+              <span class="badge {% if entry.productivity_category == 'PRODUCTIVE' %}bg-success{% elif entry.productivity_category == 'DISTRACTION' %}bg-danger{% else %}bg-secondary{% endif %}">
+                {{ entry.productivity_category }}
+              </span>
+            </td>
+            <td>
+              <span class="badge {% if entry.status == 'CLOSED' %}bg-light text-dark border{% else %}bg-warning text-dark{% endif %}">
+                {{ entry.status }}
+              </span>
+            </td>
+            <td class="small text-muted text-truncate" style="max-width: 180px;">
+              {{ entry.notes|default:"-" }}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" class="text-center py-4 text-muted">No time tracking sessions recorded yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-2">
+      <span class="small text-muted">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+      <ul class="pagination pagination-sm m-0">
+        {% if page_obj.has_previous %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&date={{ selected_date }}">Previous</a></li>
+        {% endif %}
+        {% if page_obj.has_next %}
+          <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&date={{ selected_date }}">Next</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

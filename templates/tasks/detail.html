@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ task.title }} - Task Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <a href="{% url 'task_list' %}" class="small text-muted text-decoration-none"><i class="bi bi-arrow-left me-1"></i> Back to Tasks</a>
+    <h3 class="fw-bold mt-1 mb-0">{{ task.title }}</h3>
+  </div>
+  <div class="d-flex gap-2">
+    <form action="{% url 'start_timer' %}" method="post">
+      {% csrf_token %}
+      <input type="hidden" name="task_id" value="{{ task.id }}">
+      <button type="submit" class="btn btn-primary btn-sm">
+        <i class="bi bi-play-fill me-1"></i> Start Timer on Task
+      </button>
+    </form>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header fw-bold">Description</div>
+      <div class="card-body">
+        <p class="mb-0 text-secondary">{{ task.description|default:"No description provided."|linebreaks }}</p>
+      </div>
+    </div>
+
+    <!-- Logged Time Entries for this Task -->
+    <div class="card shadow-sm">
+      <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+        <span>Logged Time Entries ({{ time_entries.count }})</span>
+        <span class="small text-muted">Total: {{ task.actual_hours }} hrs</span>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Started</th>
+                <th>Duration</th>
+                <th>Category</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for entry in time_entries %}
+                <tr>
+                  <td>{{ entry.started_at|date:"M d, Y H:i" }}</td>
+                  <td><strong>{{ entry.formatted_duration }}</strong></td>
+                  <td><span class="badge bg-light text-dark border">{{ entry.productivity_category }}</span></td>
+                  <td class="small text-muted">{{ entry.notes|default:"-" }}</td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center py-3 text-muted">No time tracked on this task yet.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card shadow-sm">
+      <div class="card-header fw-bold">Task Metadata</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Status</label>
+          <div><span class="badge bg-primary">{{ task.get_status_display }}</span></div>
+        </div>
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Priority</label>
+          <div><span class="badge bg-danger">P{{ task.priority }}</span></div>
+        </div>
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Progress</label>
+          <div class="progress mt-1" style="height: 10px;">
+            <div class="progress-bar bg-success" style="width: {{ task.progress }}%;"></div>
+          </div>
+          <span class="small text-muted mt-1 d-block">{{ task.progress }}% completed</span>
+        </div>
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Assigned To</label>
+          <div>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</div>
+        </div>
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Deadline</label>
+          <div class="{% if task.is_overdue %}text-danger fw-bold{% endif %}">{{ task.deadline|date:"M d, Y H:i" }}</div>
+        </div>
+        <div class="mb-3">
+          <label class="text-muted small fw-semibold">Estimated vs Actual</label>
+          <div>{{ task.actual_hours }}h tracked / {{ task.estimated_hours }}h planned</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

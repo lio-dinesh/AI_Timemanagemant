@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block title %}Projects - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold m-0">Projects</h3>
+    <p class="text-muted small m-0">Organize and monitor project progress, tasks, and deadlines</p>
+  </div>
+  <a href="{% url 'project_create' %}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i> New Project
+  </a>
+</div>
+
+<div class="row g-4">
+  {% for project in projects %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-sm h-100 border-top border-4 {% if project.status == 'ACTIVE' %}border-primary{% elif project.status == 'COMPLETED' %}border-success{% else %}border-secondary{% endif %}">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="badge {% if project.status == 'ACTIVE' %}bg-primary{% elif project.status == 'COMPLETED' %}bg-success{% else %}bg-secondary{% endif %}">
+                {{ project.status }}
+              </span>
+              <span class="badge bg-light text-dark border">P{{ project.priority }}</span>
+            </div>
+            <h5 class="card-title fw-bold">
+              <a href="{% url 'project_detail' project.id %}" class="text-decoration-none text-dark">{{ project.name }}</a>
+            </h5>
+            <p class="card-text text-muted small mb-3">{{ project.description|truncatewords:20|default:"No description." }}</p>
+          </div>
+          <div>
+            <div class="d-flex justify-content-between small text-muted mb-3">
+              <span><i class="bi bi-calendar3 me-1"></i> Due: {{ project.deadline|date:"M d, Y" }}</span>
+              <span><i class="bi bi-check2-circle me-1"></i> {{ project.tasks.count }} tasks</span>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="{% url 'project_detail' project.id %}" class="btn btn-sm btn-outline-primary w-100">View Project</a>
+              {% if project.status != 'ARCHIVED' %}
+                <a href="{% url 'project_archive' project.id %}" class="btn btn-sm btn-outline-secondary" onclick="return confirm('Archive this project?')">
+                  <i class="bi bi-archive"></i>
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12 text-center py-5 text-muted">
+      No projects available. Click "New Project" to start tracking one.
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

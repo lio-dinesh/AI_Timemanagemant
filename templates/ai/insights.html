@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Insights & Recommendations - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold m-0"><i class="bi bi-robot text-primary me-2"></i>AI Insights & Optimization</h3>
+    <p class="text-muted small m-0">Predictive time allocation, anomaly flags, and intelligent schedule recommendations</p>
+  </div>
+  <form method="post" action="{% url 'ai_optimize' %}" class="m-0">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary btn-sm">
+      <i class="bi bi-magic me-1"></i> Run AI Optimization
+    </button>
+  </form>
+</div>
+
+<!-- Insights Cards -->
+<div class="row g-4">
+  {% for ins in insights %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card shadow-sm h-100 border-top border-4 {% if ins.insight_type == 'ANOMALY' %}border-danger{% elif ins.insight_type == 'SCHEDULE_RECOMMENDATION' %}border-success{% else %}border-primary{% endif %}">
+        <div class="card-body d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="badge {% if ins.insight_type == 'ANOMALY' %}bg-danger{% elif ins.insight_type == 'SCHEDULE_RECOMMENDATION' %}bg-success{% else %}bg-primary{% endif %}">
+                {{ ins.get_insight_type_display }}
+              </span>
+              <span class="badge bg-light text-muted border small">Confidence: {{ ins.confidence|floatformat:2 }}</span>
+            </div>
+
+            {% if ins.task %}
+              <h6 class="fw-bold mb-2">Task: {{ ins.task.title }}</h6>
+            {% endif %}
+
+            {% if ins.title and ins.title != ins.display_text %}
+              <h6 class="fw-semibold mb-1">{{ ins.title }}</h6>
+            {% endif %}
+
+            <p class="card-text text-secondary small mb-3">
+              {{ ins.display_text|default:"No details provided." }}
+            </p>
+
+            {% if ins.payload.recommended_start %}
+              <div class="bg-light p-2 rounded small mb-3">
+                <div><i class="bi bi-clock me-1 text-primary"></i> <strong>Start:</strong> {{ ins.payload.recommended_start }}</div>
+                <div><i class="bi bi-hourglass-split me-1 text-primary"></i> <strong>Duration:</strong> {{ ins.payload.duration_minutes }} mins</div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="d-flex gap-2 mt-2">
+            {% if ins.insight_type == 'SCHEDULE_RECOMMENDATION' %}
+              <form method="post" action="{% url 'ai_apply_insight' ins.id %}" class="m-0 flex-grow-1">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-success w-100">
+                  <i class="bi bi-calendar-check me-1"></i> Apply to Calendar
+                </button>
+              </form>
+            {% endif %}
+            <form method="post" action="{% url 'ai_dismiss_insight' ins.id %}" class="m-0">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary">
+                Dismiss
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  {% empty %}
+    <div class="col-12 text-center py-5 text-muted">
+      <i class="bi bi-check2-circle fs-1 text-success d-block mb-2"></i>
+      No active anomalies or pending recommendations. Click "Run AI Optimization" to re-analyze your schedule.
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

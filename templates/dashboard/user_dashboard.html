@@ -1,0 +1,398 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - AI Time Management{% endblock %}
+
+{% block content %}
+<!-- NLP Command Bar -->
+<div class="nlp-command-box mb-4 shadow-sm">
+  <div class="d-flex align-items-center justify-content-between mb-2">
+    <div class="fw-bold fs-5 text-white"><i class="bi bi-stars me-1 text-warning"></i> AI Assistant Command Bar</div>
+    <div class="d-flex align-items-center gap-2">
+      <span id="voice-indicator" class="badge bg-danger text-white d-none"><i class="bi bi-record-circle-fill me-1 animate-pulse"></i> Listening...</span>
+      <span class="badge bg-light text-primary small">NLP Voice & Text</span>
+    </div>
+  </div>
+  <p class="small text-white-50 mb-3">Speak or type in plain English, e.g. <em>"Schedule my database task tomorrow morning"</em>, <em>"Remind me 30 minutes before meeting"</em>, or <em>"Start timer"</em>.</p>
+  
+  <form id="nlp-form" hx-post="{% url 'nlp_command_prompt' %}" hx-target="#nlp-feedback" hx-swap="innerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="conversation_id" id="nlp-conversation-id" value="">
+    <input type="hidden" name="source" id="nlp-source" value="TEXT">
+    <div class="input-group input-group-lg shadow-sm">
+      <input type="text" name="command" id="nlp-input" class="form-control nlp-command-input fs-6" placeholder="Type or click the microphone to speak a command..." autocomplete="off">
+      <button class="btn btn-outline-light px-3" type="button" id="btn-mic" title="Click to speak (Voice Recognition)" onclick="toggleVoiceRecognition()">
+        <i class="bi bi-mic-fill" id="mic-icon"></i>
+      </button>
+      <button class="btn btn-light fw-bold px-4 text-primary" type="submit">
+        <i class="bi bi-send-fill me-1"></i> Run
+      </button>
+    </div>
+  </form>
+  <div class="d-flex flex-wrap gap-2 mt-2 align-items-center">
+    <span class="small text-white-50 me-1" style="font-size: 0.75rem;">Suggestions:</span>
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Remind me 30 minutes before meeting');">
+      🔔 Remind 30m before meeting
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Schedule focus session tomorrow morning');">
+      📅 Schedule focus session
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Start timer');">
+      ⏱️ Start timer
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Productivity summary');">
+      📊 Productivity summary
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Plan my day');">
+      🤖 Plan my day
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Help');">
+      ❓ Help
+    </button>
+  </div>
+  <div id="nlp-feedback" class="mt-3"></div>
+</div>
+
+<!-- KPI Cards Row -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-primary">
+      <div>
+        <div class="kpi-label">Today's Tracked</div>
+        <div class="kpi-value text-primary">{{ metrics.today_tracked_hours }}h</div>
+      </div>
+      <i class="bi bi-stopwatch fs-1 text-primary opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-success">
+      <div>
+        <div class="kpi-label">Productive Time</div>
+        <div class="kpi-value text-success">{{ metrics.today_productive_hours }}h</div>
+      </div>
+      <i class="bi bi-lightning-charge-fill fs-1 text-success opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-info">
+      <div>
+        <div class="kpi-label">Productivity Score</div>
+        <div class="kpi-value text-info">{{ metrics.today_score|floatformat:1 }}%</div>
+      </div>
+      <i class="bi bi-graph-up-arrow fs-1 text-info opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 {% if metrics.tasks_overdue > 0 %}border-danger{% else %}border-secondary{% endif %}">
+      <div>
+        <div class="kpi-label">Tasks Overdue</div>
+        <div class="kpi-value {% if metrics.tasks_overdue > 0 %}text-danger{% else %}text-muted{% endif %}">
+          {{ metrics.tasks_overdue }}
+        </div>
+      </div>
+      <i class="bi bi-exclamation-triangle-fill fs-1 text-danger opacity-25"></i>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- 7-Day Productivity Trend (Chart.js) -->
+  <div class="col-lg-8">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>7-Day Productivity & Focus Trend</span>
+        <a href="{% url 'reports' %}" class="btn btn-sm btn-link text-decoration-none">Full Report</a>
+      </div>
+      <div class="card-body">
+        <canvas id="productivityChart" height="130"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's Upcoming Events & Schedule -->
+  <div class="col-lg-4">
+    <div class="card shadow-sm h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span>Today's Schedule</span>
+        <a href="{% url 'calendar' %}" class="btn btn-sm btn-link text-decoration-none">Calendar</a>
+      </div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush">
+          {% for ev in upcoming_events %}
+            <li class="list-group-item p-3">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <span class="badge {% if ev.event_type == 'MEETING' %}bg-warning text-dark{% elif ev.event_type == 'FOCUS' %}bg-primary{% else %}bg-secondary{% endif %} mb-1">
+                    {{ ev.get_event_type_display }}
+                  </span>
+                  <div class="fw-semibold">{{ ev.title }}</div>
+                  <div class="text-muted small">
+                    <i class="bi bi-clock me-1"></i>{{ ev.start_at|time:"H:i" }} - {{ ev.end_at|time:"H:i" }}
+                  </div>
+                </div>
+                {% if ev.meeting_url %}
+                  <a href="{{ ev.meeting_url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-camera-video"></i>
+                  </a>
+                {% endif %}
+              </div>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-center py-4 text-muted">No scheduled events for today.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Active AI Recommendations Row -->
+{% if ai_recommendations %}
+<div class="card shadow-sm mb-4 border-primary">
+  <div class="card-header bg-primary bg-opacity-10 d-flex justify-content-between align-items-center text-primary fw-bold">
+    <span><i class="bi bi-lightbulb-fill me-1"></i> Active AI Recommendations</span>
+    <a href="{% url 'ai_insights' %}" class="small text-decoration-none">Manage All Insights</a>
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      {% for rec in ai_recommendations %}
+        <div class="col-md-4">
+          <div class="border rounded p-3 bg-light h-100 d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-primary">{{ rec.get_insight_type_display }}</span>
+                <span class="text-muted small">{{ rec.confidence|floatformat:2 }} conf</span>
+              </div>
+              {% if rec.title and rec.title != rec.display_text %}
+                <div class="fw-semibold small mb-1">{{ rec.title }}</div>
+              {% endif %}
+              <p class="small mb-3 text-secondary">
+                {{ rec.display_text|default:"No details provided." }}
+              </p>
+            </div>
+            <div class="d-flex gap-2">
+              {% if rec.insight_type == 'SCHEDULE_RECOMMENDATION' %}
+                <form method="post" action="{% url 'ai_apply_insight' rec.id %}" class="m-0 w-100">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-success w-100">
+                    <i class="bi bi-check-circle me-1"></i> Apply Slot
+                  </button>
+                </form>
+              {% endif %}
+              <form method="post" action="{% url 'ai_dismiss_insight' rec.id %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const ctx = document.getElementById('productivityChart');
+  if (ctx) {
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: {{ metrics.trend_labels|safe }},
+        datasets: [
+          {
+            label: 'Productive Hours',
+            data: {{ metrics.trend_productive_hours|safe }},
+            backgroundColor: '#4f46e5',
+            borderRadius: 6,
+            yAxisID: 'y',
+          },
+          {
+            label: 'Tracked Hours',
+            data: {{ metrics.trend_tracked_hours|safe }},
+            backgroundColor: '#cbd5e1',
+            borderRadius: 6,
+            yAxisID: 'y',
+          },
+          {
+            type: 'line',
+            label: 'Productivity Score (%)',
+            data: {{ metrics.trend_scores|safe }},
+            borderColor: '#10b981',
+            borderWidth: 2,
+            pointBackgroundColor: '#10b981',
+            yAxisID: 'y1',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: { display: true, text: 'Hours' }
+          },
+          y1: {
+            position: 'right',
+            beginAtZero: true,
+            max: 100,
+            grid: { drawOnChartArea: false },
+            title: { display: true, text: 'Score (%)' }
+          }
+        }
+      }
+    });
+  }
+
+  // --- NLP Multi-Turn & Voice Interactive System ---
+  let nlpConversationId = localStorage.getItem('ai_timesync_nlp_cid') || (function() {
+    const id = 'cid_' + Math.random().toString(36).substring(2, 11) + '_' + Date.now();
+    localStorage.setItem('ai_timesync_nlp_cid', id);
+    return id;
+  })();
+  document.getElementById('nlp-conversation-id').value = nlpConversationId;
+
+  function setNlpCommand(cmd) {
+    const input = document.getElementById('nlp-input');
+    input.value = cmd;
+    document.getElementById('nlp-source').value = 'TEXT';
+    htmx.trigger('#nlp-form', 'submit');
+  }
+
+  // Web Speech API Voice Recognition
+  let recognition = null;
+  let isListening = false;
+
+  function toggleVoiceRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice recognition is not supported in this browser. Please use Google Chrome, Edge, or Safari.");
+      return;
+    }
+
+    const indicator = document.getElementById('voice-indicator');
+    const micIcon = document.getElementById('mic-icon');
+    const btnMic = document.getElementById('btn-mic');
+    const input = document.getElementById('nlp-input');
+
+    if (isListening && recognition) {
+      recognition.stop();
+      return;
+    }
+
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = function() {
+      isListening = true;
+      indicator.classList.remove('d-none');
+      btnMic.classList.remove('btn-outline-light');
+      btnMic.classList.add('btn-danger');
+      micIcon.classList.remove('bi-mic-fill');
+      micIcon.classList.add('bi-record-circle-fill');
+      input.placeholder = "Listening... Speak your command now";
+    };
+
+    recognition.onresult = function(event) {
+      const transcript = event.results[0][0].transcript;
+      input.value = transcript;
+      document.getElementById('nlp-source').value = 'VOICE';
+      // Automatically execute transcribed voice command
+      setTimeout(() => {
+        htmx.trigger('#nlp-form', 'submit');
+      }, 300);
+    };
+
+    recognition.onerror = function(event) {
+      console.warn("Speech recognition error:", event.error);
+      resetVoiceUI();
+    };
+
+    recognition.onend = function() {
+      resetVoiceUI();
+    };
+
+    try {
+      recognition.start();
+    } catch(e) {
+      console.error("Could not start voice recognition:", e);
+      resetVoiceUI();
+    }
+  }
+
+  function resetVoiceUI() {
+    isListening = false;
+    const indicator = document.getElementById('voice-indicator');
+    const micIcon = document.getElementById('mic-icon');
+    const btnMic = document.getElementById('btn-mic');
+    const input = document.getElementById('nlp-input');
+
+    indicator.classList.add('d-none');
+    btnMic.classList.remove('btn-danger');
+    btnMic.classList.add('btn-outline-light');
+    micIcon.classList.remove('bi-record-circle-fill');
+    micIcon.classList.add('bi-mic-fill');
+    input.placeholder = "Type or click the microphone to speak a command...";
+  }
+
+  // Interactive Confirmation Handlers
+  function confirmNlpAction(token, conversationId) {
+    const feedbackEl = document.getElementById('nlp-feedback');
+    feedbackEl.innerHTML = "<div class='alert alert-info py-2'>Processing confirmed action...</div>";
+
+    fetch("{% url 'api_nlp_confirm' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        token: token,
+        conversation_id: conversationId || nlpConversationId
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      const alertClass = data.success ? "alert-success" : "alert-warning";
+      feedbackEl.innerHTML = `<div class='alert ${alertClass} py-2 mb-2'><strong>${data.intent}:</strong> ${data.message}</div>`;
+      if (data.success) {
+        setTimeout(() => location.reload(), 1500);
+      }
+    })
+    .catch(err => {
+      feedbackEl.innerHTML = `<div class='alert alert-danger py-2'>Network error executing confirmation.</div>`;
+    });
+  }
+
+  function cancelNlpAction(conversationId) {
+    const feedbackEl = document.getElementById('nlp-feedback');
+    fetch("{% url 'api_nlp_cancel' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify({
+        conversation_id: conversationId || nlpConversationId
+      })
+    })
+    .then(res => res.json())
+    .then(data => {
+      feedbackEl.innerHTML = `<div class='alert alert-secondary py-2'>${data.message}</div>`;
+    });
+  }
+
+  function selectNlpCandidate(index, conversationId) {
+    const input = document.getElementById('nlp-input');
+    input.value = `number ${index}`;
+    document.getElementById('nlp-source').value = 'TEXT';
+    htmx.trigger('#nlp-form', 'submit');
+  }
+</script>
+{% endblock %}

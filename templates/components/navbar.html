@@ -1,0 +1,94 @@
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom rounded-3 mb-4 px-3 py-2 shadow-sm d-flex justify-content-between">
+  <div class="d-flex align-items-center gap-3">
+    <!-- Active Timer Widget -->
+    <div id="navbar-timer-container">
+      {% include 'components/timer_widget.html' %}
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center gap-3">
+    <!-- Quick Timer Start Shortcut -->
+    {% if not active_timer %}
+      <a href="{% url 'timer_dashboard' %}" class="btn btn-sm btn-outline-primary d-none d-md-inline-flex align-items-center gap-1">
+        <i class="bi bi-play-fill"></i> Start Timer
+      </a>
+    {% endif %}
+
+    <!-- Notification Dropdown -->
+    <div class="dropdown">
+      <button class="btn btn-light position-relative rounded-circle p-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-bell fs-5"></i>
+        {% if unread_notifications_count > 0 %}
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+            {{ unread_notifications_count }}
+          </span>
+        {% endif %}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow p-2" style="width: 320px;">
+        <li class="d-flex justify-content-between align-items-center px-2 py-1 border-bottom mb-2">
+          <span class="fw-bold small">Notifications</span>
+          <a href="{% url 'notification_list' %}" class="small text-decoration-none">View All</a>
+        </li>
+        {% if recent_notifications %}
+          {% for n in recent_notifications %}
+            <li class="mb-1 p-2 rounded {% if not n.read_at %}bg-light{% endif %}">
+              <div class="d-flex justify-content-between">
+                <span class="fw-semibold small text-truncate" style="max-width: 220px;">{{ n.title }}</span>
+                <span class="text-muted" style="font-size: 0.7rem;">{{ n.scheduled_for|timesince }} ago</span>
+              </div>
+              <p class="text-muted small mb-0 text-truncate">{{ n.message }}</p>
+            </li>
+          {% endfor %}
+        {% else %}
+          <li class="text-center text-muted py-3 small">No recent notifications</li>
+        {% endif %}
+      </ul>
+    </div>
+
+    <!-- User Profile Dropdown -->
+    <div class="dropdown">
+      <button class="btn btn-sm btn-light border d-flex align-items-center gap-2 dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-person-circle text-primary"></i>
+        <span class="d-none d-sm-inline fw-medium small">{{ user.first_name|default:user.username }}</span>
+        <span class="badge bg-secondary-subtle text-secondary border px-1 d-none d-md-inline" style="font-size: 0.7rem;">{{ user.role }}</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow-sm border mt-1">
+        <li class="px-3 py-2 border-bottom">
+          <div class="fw-bold small">{{ user.get_full_name|default:user.username }}</div>
+          <div class="text-muted small" style="font-size: 0.75rem;">{{ user.email }}</div>
+        </li>
+        <li>
+          <a class="dropdown-item py-2 small" href="{% url 'profile' %}">
+            <i class="bi bi-person me-2 text-primary"></i> Profile & Preferences
+          </a>
+        </li>
+        {% if user.is_manager_role %}
+          <li>
+            <a class="dropdown-item py-2 small" href="{% url 'manager_dashboard' %}">
+              <i class="bi bi-people me-2 text-success"></i> Manager Dashboard
+            </a>
+          </li>
+        {% endif %}
+        {% if user.is_admin_role %}
+          <li>
+            <a class="dropdown-item py-2 small" href="{% url 'admin_dashboard' %}">
+              <i class="bi bi-shield-lock me-2 text-danger"></i> Admin Dashboard
+            </a>
+          </li>
+        {% endif %}
+        <li><hr class="dropdown-divider my-1"></li>
+        <li>
+          <a class="dropdown-item py-2 small text-danger fw-semibold" href="{% url 'logout' %}">
+            <i class="bi bi-box-arrow-right me-2"></i> Sign Out
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Direct Sign Out Icon Button -->
+    <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1 shadow-sm px-2" title="Sign Out">
+      <i class="bi bi-box-arrow-right"></i>
+      <span class="d-none d-md-inline small fw-semibold">Sign Out</span>
+    </a>
+  </div>
+</nav>

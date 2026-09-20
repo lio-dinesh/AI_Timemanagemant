@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}Focus Timer - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8 text-center py-4">
+    <h3 class="fw-bold mb-1">Focus Timer Mode</h3>
+    <p class="text-muted small mb-4">Dedicated deep work session with real-time authoritative server tracking</p>
+
+    <div class="card shadow p-5 mb-4 border-0" style="background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);">
+      {% if active_timer %}
+        <div class="mb-3">
+          <span class="badge bg-success px-3 py-2 rounded-pill"><span class="pulse-dot me-1"></span> Timer Running</span>
+          {% if active_timer.task %}
+            <h4 class="fw-bold mt-3 mb-1">{{ active_timer.task.title }}</h4>
+          {% endif %}
+          <div class="text-muted small">Category: <strong>{{ active_timer.productivity_category }}</strong></div>
+        </div>
+
+        <div class="display-1 fw-bold my-4 text-primary font-monospace" id="live-timer-display" data-started-at="{{ active_timer.started_at|date:'c' }}">
+          00:00:00
+        </div>
+
+        <form action="{% url 'stop_timer' %}" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="idle_seconds" id="timer-idle-seconds-input" value="0">
+          <button type="submit" class="btn btn-danger btn-lg px-5 py-3 fw-bold rounded-pill shadow">
+            <i class="bi bi-stop-fill fs-4 me-1"></i> Stop Focus Session
+          </button>
+        </form>
+      {% else %}
+        <div class="mb-4">
+          <span class="badge bg-secondary px-3 py-2 rounded-pill">Timer Idle</span>
+          <div class="display-1 fw-bold my-4 text-muted font-monospace">00:00:00</div>
+        </div>
+
+        <form action="{% url 'start_timer' %}" method="post" class="text-start mx-auto" style="max-width: 480px;">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Select Task (Optional)</label>
+            <select name="task_id" class="form-select">
+              <option value="">-- Unassigned / General Focus --</option>
+              {% for t in recent_tasks %}
+                <option value="{{ t.id }}">{{ t.title }} (P{{ t.priority }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Activity Description / Type</label>
+            <input type="text" name="activity_type" class="form-control" value="Python Coding" placeholder="e.g. Code Review, Documentation, Debugging">
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold rounded-pill shadow">
+            <i class="bi bi-play-fill fs-4 me-1"></i> Start Focus Session
+          </button>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="d-flex justify-content-center gap-3">
+      <a href="{% url 'manual_entry' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-pencil-square me-1"></i> Add Manual Time Entry
+      </a>
+      <a href="{% url 'time_history' %}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-clock-history me-1"></i> View Time History
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

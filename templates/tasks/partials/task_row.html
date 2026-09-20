@@ -1,0 +1,54 @@
+<tr id="task-row-{{ task.id }}">
+  <td>
+    <div class="fw-semibold">
+      <a href="{% url 'task_detail' task.id %}" class="text-decoration-none text-dark">{{ task.title }}</a>
+    </div>
+    {% if task.project %}
+      <span class="badge bg-light text-muted border small">{{ task.project.name }}</span>
+    {% endif %}
+    <span class="badge bg-light text-dark border small">{{ task.category }}</span>
+  </td>
+  <td>
+    <form hx-post="{% url 'task_toggle_status' task.id %}" hx-target="#task-row-{{ task.id }}" hx-swap="outerHTML" class="m-0">
+      {% csrf_token %}
+      <select name="status" class="form-select form-select-sm" onchange="this.form.requestSubmit()">
+        <option value="TODO" {% if task.status == 'TODO' %}selected{% endif %}>To Do</option>
+        <option value="IN_PROGRESS" {% if task.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+        <option value="BLOCKED" {% if task.status == 'BLOCKED' %}selected{% endif %}>Blocked</option>
+        <option value="COMPLETED" {% if task.status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+        <option value="CANCELLED" {% if task.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+      </select>
+    </form>
+  </td>
+  <td>
+    <span class="badge {% if task.priority >= 8 %}bg-danger{% elif task.priority >= 5 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+      P{{ task.priority }}
+    </span>
+  </td>
+  <td style="width: 15%;">
+    <div class="d-flex align-items-center gap-2">
+      <div class="progress flex-grow-1" style="height: 6px;">
+        <div class="progress-bar bg-success" role="progressbar" style="width: {{ task.progress }}%;"></div>
+      </div>
+      <span class="small text-muted">{{ task.progress }}%</span>
+    </div>
+  </td>
+  <td>
+    <div class="small fw-semibold">{{ task.actual_hours }}h / {{ task.estimated_hours }}h</div>
+  </td>
+  <td>
+    <span class="small {% if task.is_overdue %}text-danger fw-bold{% else %}text-muted{% endif %}">
+      {{ task.deadline|date:"M d, H:i" }}
+    </span>
+  </td>
+  <td>
+    <!-- Start Timer for this Task directly -->
+    <form action="{% url 'start_timer' %}" method="post" class="d-inline">
+      {% csrf_token %}
+      <input type="hidden" name="task_id" value="{{ task.id }}">
+      <button type="submit" class="btn btn-sm btn-outline-primary" title="Start Timer">
+        <i class="bi bi-play-fill"></i>
+      </button>
+    </form>
+  </td>
+</tr>

@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+
+{% block title %}Manager Dashboard - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="fw-bold m-0">Team Productivity Dashboard</h3>
+    <p class="text-muted small m-0">Monitor team work allocations, task completion rates, and active progress</p>
+  </div>
+  <a href="{% url 'team' %}" class="btn btn-outline-primary btn-sm">
+    <i class="bi bi-people me-1"></i> Manage Team
+  </a>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-primary">
+      <div>
+        <div class="kpi-label">Team Members</div>
+        <div class="kpi-value text-primary">{{ metrics.team_size }}</div>
+      </div>
+      <i class="bi bi-people-fill fs-1 text-primary opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-success">
+      <div>
+        <div class="kpi-label">Team Avg Score</div>
+        <div class="kpi-value text-success">{{ metrics.avg_team_score }}%</div>
+      </div>
+      <i class="bi bi-award-fill fs-1 text-success opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-info">
+      <div>
+        <div class="kpi-label">Team Tracked Today</div>
+        <div class="kpi-value text-info">{{ metrics.team_tracked_hours }}h</div>
+      </div>
+      <i class="bi bi-clock-fill fs-1 text-info opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 {% if metrics.overdue_tasks > 0 %}border-danger{% else %}border-secondary{% endif %}">
+      <div>
+        <div class="kpi-label">Team Overdue Tasks</div>
+        <div class="kpi-value {% if metrics.overdue_tasks > 0 %}text-danger{% else %}text-muted{% endif %}">
+          {{ metrics.overdue_tasks }}
+        </div>
+      </div>
+      <i class="bi bi-exclamation-circle-fill fs-1 text-danger opacity-25"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Team Members Summary -->
+<div class="card shadow-sm mb-4">
+  <div class="card-header fw-bold">Direct Reports & Work Allocation</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Employee</th>
+            <th>Work Hours</th>
+            <th>Active Tasks</th>
+            <th>Timezone</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for member in metrics.team_members %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-weight: 600;">
+                    {{ member.first_name|default:member.username|slice:":1"|upper }}
+                  </div>
+                  <div>
+                    <div class="fw-semibold">{{ member.get_full_name|default:member.username }}</div>
+                    <div class="text-muted small">{{ member.email }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>{{ member.work_start_time|time:"H:i" }} - {{ member.work_end_time|time:"H:i" }}</td>
+              <td><span class="badge bg-secondary">{{ member.assigned_tasks.count }} tasks</span></td>
+              <td>{{ member.timezone }}</td>
+              <td>
+                <a href="{% url 'task_list' %}?assigned_to={{ member.id }}" class="btn btn-sm btn-outline-secondary">
+                  View Tasks
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">No direct reports assigned to this manager.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile & Preferences - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h3 class="fw-bold m-0">Profile & Preferences</h3>
+        <p class="text-muted small m-0">Manage your account credentials, working hours, and notifications</p>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary fs-6">{{ user.role }}</span>
+        <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 shadow-sm">
+          <i class="bi bi-box-arrow-right"></i> Sign Out
+        </a>
+      </div>
+    </div>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="card mb-4">
+        <div class="card-header fw-bold">User Information</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">First Name</label>
+              {{ form.first_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Last Name</label>
+              {{ form.last_name }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Email Address</label>
+              <input type="email" class="form-control" value="{{ user.email }}" disabled>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Timezone</label>
+              {{ form.timezone }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header fw-bold">Work Hours & Scheduling Preferences</div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Work Day Starts</label>
+              {{ form.work_start_time }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Work Day Ends</label>
+              {{ form.work_end_time }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Preferred Focus Block (Minutes)</label>
+              <input type="number" class="form-control" name="preferred_focus_duration" value="{{ preferences.preferred_focus_duration|default:50 }}">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small fw-semibold">Break Duration (Minutes)</label>
+              <input type="number" class="form-control" name="break_duration" value="{{ preferences.break_duration|default:10 }}">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header fw-bold">Notification Preferences</div>
+        <div class="card-body">
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" name="in_app_enabled" id="inAppToggle" {% if notif_preferences.in_app_enabled %}checked{% endif %}>
+            <label class="form-check-label fw-semibold small" for="inAppToggle">Enable In-App Notifications</label>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" name="email_enabled" id="emailToggle" {% if notif_preferences.email_enabled %}checked{% endif %}>
+            <label class="form-check-label fw-semibold small" for="emailToggle">Enable Brevo Transactional Email Notifications</label>
+          </div>
+          <div class="form-check form-switch mb-2">
+            <input class="form-check-input" type="checkbox" name="task_deadline_reminders" id="deadlineToggle" {% if notif_preferences.task_deadline_reminders %}checked{% endif %}>
+            <label class="form-check-label fw-semibold small" for="deadlineToggle">Task Deadline Reminders (24h & 1h prior)</label>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="daily_summary" id="summaryToggle" {% if notif_preferences.daily_summary %}checked{% endif %}>
+            <label class="form-check-label fw-semibold small" for="summaryToggle">Daily Productivity Summary Digest</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-end mb-5">
+        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+          <i class="bi bi-check2-circle me-1"></i> Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - Project Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <a href="{% url 'project_list' %}" class="small text-muted text-decoration-none"><i class="bi bi-arrow-left me-1"></i> Back to Projects</a>
+    <h3 class="fw-bold mt-1 mb-0">{{ project.name }}</h3>
+  </div>
+  <a href="{% url 'task_create' %}?project_id={{ project.id }}" class="btn btn-primary btn-sm">
+    <i class="bi bi-plus-lg me-1"></i> Add Task
+  </a>
+</div>
+
+<!-- Project Metrics -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-primary">
+      <div>
+        <div class="kpi-label">Progress</div>
+        <div class="kpi-value text-primary">{{ stats.progress_percentage }}%</div>
+      </div>
+      <i class="bi bi-percent fs-1 text-primary opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-success">
+      <div>
+        <div class="kpi-label">Completed Tasks</div>
+        <div class="kpi-value text-success">{{ stats.completed_tasks }} / {{ stats.total_tasks }}</div>
+      </div>
+      <i class="bi bi-check2-all fs-1 text-success opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-info">
+      <div>
+        <div class="kpi-label">Total Actual Time</div>
+        <div class="kpi-value text-info">{{ stats.total_actual_seconds|divisibleby:3600|default:0 }}h</div>
+      </div>
+      <i class="bi bi-clock-history fs-1 text-info opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-secondary">
+      <div>
+        <div class="kpi-label">Deadline</div>
+        <div class="kpi-value fs-5 mt-2">{{ project.deadline|date:"M d, Y" }}</div>
+      </div>
+      <i class="bi bi-calendar3 fs-1 text-secondary opacity-25"></i>
+    </div>
+  </div>
+</div>
+
+<!-- Tasks under this Project -->
+<div class="card shadow-sm">
+  <div class="card-header fw-bold">Project Tasks</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Task Title</th>
+            <th>Assigned To</th>
+            <th>Status</th>
+            <th>Priority</th>
+            <th>Deadline</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for task in tasks %}
+            <tr>
+              <td>
+                <a href="{% url 'task_detail' task.id %}" class="fw-semibold text-decoration-none text-dark">{{ task.title }}</a>
+              </td>
+              <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
+              <td><span class="badge bg-primary">{{ task.get_status_display }}</span></td>
+              <td><span class="badge bg-secondary">P{{ task.priority }}</span></td>
+              <td>{{ task.deadline|date:"M d, Y H:i" }}</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">No tasks added to this project yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Notification Analytics - AI Time Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <a href="{% url 'notification_list' %}" class="small text-muted text-decoration-none"><i class="bi bi-arrow-left me-1"></i> Back to Notifications</a>
+    <h3 class="fw-bold mt-1 mb-0">Notification & Email Deliverability</h3>
+    <p class="text-muted small m-0">Real-time delivery statistics and transactional email rates via Brevo</p>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-primary">
+      <div>
+        <div class="kpi-label">Total Reminders</div>
+        <div class="kpi-value text-primary">{{ analytics.total }}</div>
+      </div>
+      <i class="bi bi-send fs-1 text-primary opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-success">
+      <div>
+        <div class="kpi-label">Delivery Rate</div>
+        <div class="kpi-value text-success">{{ analytics.delivery_rate }}%</div>
+      </div>
+      <i class="bi bi-check2-circle fs-1 text-success opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 border-info">
+      <div>
+        <div class="kpi-label">Open Rate</div>
+        <div class="kpi-value text-info">{{ analytics.open_rate }}%</div>
+      </div>
+      <i class="bi bi-envelope-open fs-1 text-info opacity-25"></i>
+    </div>
+  </div>
+  <div class="col-sm-6 col-xl-3">
+    <div class="card kpi-card shadow-sm border-0 border-start border-4 {% if analytics.failure_rate > 0 %}border-danger{% else %}border-secondary{% endif %}">
+      <div>
+        <div class="kpi-label">Failure / Bounce</div>
+        <div class="kpi-value {% if analytics.failure_rate > 0 %}text-danger{% else %}text-muted{% endif %}">
+          {{ analytics.failure_rate }}%
+        </div>
+      </div>
+      <i class="bi bi-shield-x fs-1 text-danger opacity-25"></i>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Notifications by Channel -->
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-bold">Dispatches by Channel</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for ch in analytics.by_channel %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ ch.channel }}</span>
+              <span class="badge bg-primary rounded-pill">{{ ch.count }}</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-center text-muted">No channel data.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notifications by Type -->
+  <div class="col-md-6">
+    <div class="card shadow-sm h-100">
+      <div class="card-header fw-bold">Dispatches by Category / Type</div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for t in analytics.by_type %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>{{ t.notification_type }}</span>
+              <span class="badge bg-secondary rounded-pill">{{ t.count }}</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-center text-muted">No category data.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
