@@ -54,9 +54,25 @@ if database_url:
             DATABASES['default']['OPTIONS'] = {
                 'sslmode': 'require',
             }
+else:
+    # Build-phase fallback: Use SQLite so collectstatic never attempts a remote database connection
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # WhiteNoise Static Files Serving
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 
 # Security Headers & Cookies
 SECURE_BROWSER_XSS_FILTER = True

@@ -2,6 +2,12 @@
 # Exit immediately if a command exits with a non-zero status
 set -e
 
+echo "==> Applying database migrations on Neon PostgreSQL..."
+python manage.py migrate --noinput || true
+
+echo "==> Seeding baseline demonstration data if empty..."
+python manage.py seed_data || true
+
 # If running Celery inside the same instance (ideal for Render Free tier):
 if [ "${RUN_CELERY_IN_WEB}" = "True" ]; then
     echo "==> Starting Celery Worker & Beat scheduler in background..."
