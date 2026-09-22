@@ -20,6 +20,7 @@
 <body>
 
   {% if user.is_authenticated %}
+    <div class="sidebar-backdrop d-lg-none" id="sidebarBackdrop"></div>
     {% include 'components/sidebar.html' %}
     <div class="main-content">
       {% include 'components/navbar.html' %}

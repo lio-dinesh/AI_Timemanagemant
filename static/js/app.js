@@ -16,6 +16,26 @@ document.addEventListener('DOMContentLoaded', function() {
       if (bsAlert) bsAlert.close();
     });
   }, 5000);
+
+  // Mobile Sidebar Drawer Toggle
+  const toggleBtn = document.getElementById('sidebarToggle');
+  const sidebar = document.querySelector('.app-sidebar');
+  const backdrop = document.getElementById('sidebarBackdrop');
+
+  if (toggleBtn && sidebar) {
+    toggleBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      sidebar.classList.toggle('show');
+      if (backdrop) backdrop.classList.toggle('show');
+    });
+  }
+
+  if (backdrop && sidebar) {
+    backdrop.addEventListener('click', function() {
+      sidebar.classList.remove('show');
+      backdrop.classList.remove('show');
+    });
+  }
 });
 
 function getCookie(name) {
