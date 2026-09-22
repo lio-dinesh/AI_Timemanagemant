@@ -38,6 +38,8 @@ services:
           type: redis
           name: ai-timesync-redis
           property: connectionString
+      - key: DATABASE_URL
+        sync: false
       - key: CELERY_RESULT_BACKEND
         fromService:
           type: redis
@@ -80,6 +82,8 @@ services:
           type: redis
           name: ai-timesync-redis
           property: connectionString
+      - key: DATABASE_URL
+        sync: false
 
   # 3. Celery Beat Periodic Scheduler (Reminders, Anomaly Scans)
   - type: worker
@@ -92,6 +96,8 @@ services:
         value: config.settings.production
       - key: PYTHON_VERSION
         value: 3.12.8
+      - key: DATABASE_URL
+        sync: false
       - key: REDIS_URL
         fromService:
           type: redis
