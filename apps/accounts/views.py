@@ -10,8 +10,12 @@ from apps.accounts.services.auth import AuthService
 from apps.accounts.models import User, UserRole
 
 def login_view(request):
-    if request.user.is_authenticated:
-        return redirect('user_dashboard')
+    try:
+        if request.user.is_authenticated:
+            return redirect('user_dashboard')
+    except Exception:
+        # If database tables are not migrated yet, redirect to automatic database setup
+        return redirect('setup_database')
 
     if request.method == 'POST':
         form = LoginForm(request.POST)

@@ -1,17 +1,114 @@
+import io
+import traceback
 from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import HttpResponse, JsonResponse
+from django.db import connection
+from django.core.management import call_command
 
 def root_redirect(request):
-    if request.user.is_authenticated:
-        return redirect('user_dashboard')
+    try:
+        if request.user.is_authenticated:
+            return redirect('user_dashboard')
+    except Exception:
+        return redirect('setup_database')
     return redirect('login')
+
+def setup_database_view(request):
+    """
+    Applies migrations and seeds demo data on serverless/cloud environments (e.g. Vercel, Neon).
+    """
+    out = io.StringIO()
+    try:
+        call_command('migrate', interactive=False, stdout=out)
+        call_command('seed_data', stdout=out)
+        output_text = out.getvalue()
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Database Setup - AI TimeSync</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }}
+            .container {{ max-width: 720px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }}
+            h2 {{ color: #4ade80; margin-top: 0; }}
+            pre {{ background: #0f172a; color: #94a3b8; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; max-height: 350px; line-height: 1.5; }}
+            .btn {{ display: inline-block; background: #4f46e5; color: white; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 600; margin-top: 16px; }}
+            .btn:hover {{ background: #4338ca; }}
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2> Database Migrations & Seeding Successful!</h2>
+            <p>All database tables have been created on your Neon database, and initial demonstration accounts are ready.</p>
+            <pre>{output_text}</pre>
+            <a href="/login/" class="btn">Proceed to Sign In &rarr;</a>
+          </div>
+        </body>
+        </html>
+        """
+        return HttpResponse(html)
+    except Exception:
+        err_trace = traceback.format_exc()
+        db_conf = settings.DATABASES.get('default', {})
+        safe_engine = db_conf.get('ENGINE', 'unknown')
+        safe_host = db_conf.get('HOST', 'unknown')
+        safe_user = db_conf.get('USER', 'unknown')
+        html = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Database Setup Error - AI TimeSync</title>
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <style>
+            body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f172a; color: #f8fafc; padding: 40px 20px; }}
+            .container {{ max-width: 720px; margin: 0 auto; background: #1e293b; border-radius: 12px; padding: 32px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }}
+            h2 {{ color: #f87171; margin-top: 0; }}
+            pre {{ background: #0f172a; color: #fca5a5; padding: 16px; border-radius: 8px; overflow-x: auto; font-size: 13px; }}
+            .info {{ background: #334155; padding: 12px; border-radius: 6px; font-size: 13px; color: #cbd5e1; margin-bottom: 16px; }}
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h2>⚠️ Database Setup Failed</h2>
+            <p>Django could not run migrations against your database. Check your DATABASE_URL environment variable:</p>
+            <div class="info">
+              <strong>Database Engine:</strong> {safe_engine}<br>
+              <strong>Host:</strong> {safe_host}<br>
+              <strong>User:</strong> {safe_user}
+            </div>
+            <pre>{err_trace}</pre>
+          </div>
+        </body>
+        </html>
+        """
+        return HttpResponse(html, status=500)
+
+def health_check_view(request):
+    """
+    Diagnostics endpoint to verify database connectivity.
+    """
+    status = {"status": "ok", "database": "disconnected"}
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            cursor.fetchone()
+        status["database"] = "connected"
+        return JsonResponse(status)
+    except Exception as e:
+        status["status"] = "error"
+        status["database"] = f"error: {str(e)}"
+        return JsonResponse(status, status=500)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', root_redirect, name='root'),
+    path('setup-database/', setup_database_view, name='setup_database'),
+    path('health/', health_check_view, name='health_check'),
 
     # Core Application Routes
     path('', include('apps.accounts.urls')),
