@@ -74,31 +74,51 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
-# Database Configuration (MySQL 8.x / InnoDB default)
-DB_ENGINE = os.environ.get('DB_ENGINE', 'mysql').lower()
-
-if DB_ENGINE == 'sqlite3':
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+# Database Configuration (Auto-detect DATABASE_URL from Neon/Cloud, fallback to MySQL or SQLite)
+database_url = os.environ.get('DATABASE_URL')
+if database_url:
+    try:
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.parse(database_url, conn_max_age=600, ssl_require=True)
         }
-    }
+    except Exception:
+        from urllib.parse import urlparse
+        parsed_db = urlparse(database_url)
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql' if 'postgres' in parsed_db.scheme else 'django.db.backends.mysql',
+                'NAME': parsed_db.path.lstrip('/'),
+                'USER': parsed_db.username or '',
+                'PASSWORD': parsed_db.password or '',
+                'HOST': parsed_db.hostname or 'localhost',
+                'PORT': str(parsed_db.port or 5432),
+            }
+        }
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.environ.get('DB_NAME', 'ai_time_mng'),
-            'USER': os.environ.get('DB_USER', 'root'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', 'dinesh@19052008'),
-            'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-            'PORT': os.environ.get('DB_PORT', '3306'),
-            'OPTIONS': {
-                'charset': 'utf8mb4',
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES', innodb_strict_mode=1;",
-            },
+    DB_ENGINE = os.environ.get('DB_ENGINE', 'mysql').lower()
+    if DB_ENGINE == 'sqlite3' or os.environ.get('RENDER') or os.environ.get('VERCEL'):
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
         }
-    }
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.mysql',
+                'NAME': os.environ.get('DB_NAME', 'ai_time_mng'),
+                'USER': os.environ.get('DB_USER', 'root'),
+                'PASSWORD': os.environ.get('DB_PASSWORD', 'dinesh@19052008'),
+                'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
+                'PORT': os.environ.get('DB_PORT', '3306'),
+                'OPTIONS': {
+                    'charset': 'utf8mb4',
+                    'init_command': "SET sql_mode='STRICT_TRANS_TABLES', innodb_strict_mode=1;",
+                },
+            }
+        }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
