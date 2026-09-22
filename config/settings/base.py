@@ -10,7 +10,40 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'default-insecure-django-secret-key-change-in-production')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = [h.strip() for h in os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',') if h.strip()]
+ALLOWED_HOSTS = [
+    h.strip() for h in os.environ.get(
+        'DJANGO_ALLOWED_HOSTS',
+        '*'
+    ).split(',') if h.strip()
+]
+if '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.extend(['.onrender.com', '.vercel.app', '.pythonanywhere.com', 'ai-timemanagemant.vercel.app', 'ai-timemanagemant.onrender.com', 'localhost', '127.0.0.1'])
+
+# Reverse Proxy SSL & Host Support (Critical for Vercel, Render, Heroku)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+# CSRF Trusted Origins for Cloud & Local
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.vercel.app',
+    'https://*.onrender.com',
+    'https://*.pythonanywhere.com',
+    'https://ai-timemanagemant.vercel.app',
+    'https://ai-timemanagemant.onrender.com',
+    'https://ai-timesync-web.onrender.com',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost',
+    'http://127.0.0.1',
+]
+custom_csrf = os.environ.get('CSRF_TRUSTED_ORIGINS')
+if custom_csrf:
+    CSRF_TRUSTED_ORIGINS.extend([c.strip() for c in custom_csrf.split(',') if c.strip()])
+
+CSRF_COOKIE_HTTPONLY = False
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # Custom User Model
 AUTH_USER_MODEL = 'accounts.User'
