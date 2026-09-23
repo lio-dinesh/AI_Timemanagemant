@@ -20,7 +20,8 @@ cd AI_Timemanagemant
 
 ## 1. System Architecture
 
-```
+> 📖 **Full System Architecture & Flow Diagrams**: See [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md) for sequence flow diagrams of the NLP command pipeline, live timer concurrency locking, and proactive notification lifecycles.
+
 Browser (HTMX / Vanilla JS / Chart.js)
   │
   ▼
