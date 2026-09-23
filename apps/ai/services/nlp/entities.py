@@ -53,7 +53,8 @@ class EntityExtractor:
                 extracted = m.group(1).strip()
                 # Clean filler words
                 extracted = re.sub(r'^(to\s+|my\s+|the\s+|task\s+)', '', extracted, flags=re.IGNORECASE).strip()
-                # Strip trailing time/date keywords
+                # Strip trailing time/date and assignment keywords
+                extracted = re.sub(r'\s+(?:and\s+)?assign(?:ed)?\s+(?:to\s+)?[\w\.-]+(?:@[\w\.-]+\.\w+)?.*$', '', extracted, flags=re.IGNORECASE).strip()
                 extracted = re.sub(r'\s+(tomorrow|today|tonight|at|by|due|for|with|on|urgent|priority.*)$', '', extracted, flags=re.IGNORECASE).strip()
                 if extracted and len(extracted) > 1:
                     entities.task_title = extracted.title()
@@ -76,7 +77,17 @@ class EntityExtractor:
             val = int(num_priority.group(1))
             entities.priority = max(1, min(10, val))
 
-        # 7. Project Name extraction
+        # 7. User Reference / Assignee extraction (e.g. "assign to liodinesh1905@gmail.com", "to dinesh")
+        email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', text)
+        if email_match:
+            entities.user_reference = email_match.group(0).strip()
+            entities.extra['assignee_email'] = entities.user_reference
+        else:
+            assign_match = re.search(r'(?:assign(?:ed)?\s+(?:the\s+)?(?:task\s+)?to|delegate\s+to)\s+([a-zA-Z0-9_\-]+)', text, re.IGNORECASE)
+            if assign_match:
+                entities.user_reference = assign_match.group(1).strip()
+
+        # 8. Project Name extraction
         proj_match = re.search(r'(?:project\s+called|project\s+named|project)\s+[\'"]?([a-zA-Z0-9_\-\s]+?)[\'"]?(?:\s+(?:by|due|for|at)|$)', text, re.IGNORECASE)
         if proj_match:
             p_name = proj_match.group(1).strip()
@@ -84,7 +95,7 @@ class EntityExtractor:
             if p_name:
                 entities.project_title = p_name.title()
 
-        # 8. Reminders
+        # 9. Reminders
         if "remind" in lower or "alert" in lower or "notify" in lower:
             rem_match = re.search(r'(\d+)\s*(?:min|mins|minutes?)\s+before', lower)
             if rem_match:
@@ -94,7 +105,7 @@ class EntityExtractor:
             else:
                 entities.reminder_minutes = 30
 
-        # 9. Format (for reports)
+        # 10. Format (for reports)
         if "csv" in lower:
             entities.format = "CSV"
         elif "json" in lower:

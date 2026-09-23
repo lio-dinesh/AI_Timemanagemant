@@ -23,14 +23,14 @@ class ContextManager:
     def get_session(cls, user_id: int, conversation_id: str) -> ContextSessionSchema:
         """Retrieves active conversation context from cache or initializes new session."""
         key = cls._make_key(user_id, conversation_id)
-        data = cache.get(key)
-        if data:
-            try:
+        try:
+            data = cache.get(key)
+            if data:
                 if isinstance(data, str):
                     data = json.loads(data)
                 return ContextSessionSchema(**data)
-            except Exception:
-                pass
+        except Exception:
+            pass
 
         now_str = timezone.now().isoformat()
         return ContextSessionSchema(
@@ -43,7 +43,10 @@ class ContextManager:
     def save_session(cls, session: ContextSessionSchema) -> None:
         """Saves session state to cache with configurable TTL."""
         key = cls._make_key(session.user_id, session.conversation_id)
-        cache.set(key, session.to_dict(), timeout=NLP_CONTEXT_TTL_SECONDS)
+        try:
+            cache.set(key, session.to_dict(), timeout=NLP_CONTEXT_TTL_SECONDS)
+        except Exception:
+            pass
 
     @classmethod
     def update_context(
@@ -75,7 +78,10 @@ class ContextManager:
     @classmethod
     def clear_context(cls, user_id: int, conversation_id: str) -> None:
         key = cls._make_key(user_id, conversation_id)
-        cache.delete(key)
+        try:
+            cache.delete(key)
+        except Exception:
+            pass
 
     @classmethod
     def set_pending_confirmation(
@@ -86,15 +92,24 @@ class ContextManager:
     ) -> str:
         """Stores a staged action requiring explicit user confirmation for 10 minutes."""
         key = cls._make_confirm_key(user_id, preview.confirm_token)
-        cache.set(key, preview.to_dict(), timeout=timeout)
+        try:
+            cache.set(key, preview.to_dict(), timeout=timeout)
+        except Exception:
+            pass
         return preview.confirm_token
 
     @classmethod
     def get_pending_confirmation(cls, user_id: int, token: str) -> Optional[Dict[str, Any]]:
         key = cls._make_confirm_key(user_id, token)
-        return cache.get(key)
+        try:
+            return cache.get(key)
+        except Exception:
+            return None
 
     @classmethod
     def clear_pending_confirmation(cls, user_id: int, token: str) -> None:
         key = cls._make_confirm_key(user_id, token)
-        cache.delete(key)
+        try:
+            cache.delete(key)
+        except Exception:
+            pass

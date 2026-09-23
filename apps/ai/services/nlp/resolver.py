@@ -109,3 +109,53 @@ class EntityResolver:
                 return None, candidates, 0.60
 
         return None, [], 0.0
+
+    @staticmethod
+    def resolve_user(reference: Optional[str], current_user) -> Optional[Any]:
+        """
+        Resolves a User by email, username, full name, or contextual reference ("me", "myself").
+        """
+        if not reference:
+            return current_user
+
+        ref_clean = reference.strip()
+        ref_lower = ref_clean.lower()
+
+        if ref_lower in ("me", "myself", "self", "i"):
+            return current_user
+
+        from apps.accounts.models import User
+
+        # 1. Direct email match (e.g. liodinesh1905@gmail.com)
+        user_by_email = User.objects.filter(email__iexact=ref_clean).first()
+        if user_by_email:
+            return user_by_email
+
+        # 2. Direct username match (e.g. admin, dinesh)
+        user_by_uname = User.objects.filter(username__iexact=ref_clean).first()
+        if user_by_uname:
+            return user_by_uname
+
+        # 3. Partial email match (e.g. liodinesh)
+        user_by_email_prefix = User.objects.filter(email__icontains=ref_clean).first()
+        if user_by_email_prefix:
+            return user_by_email_prefix
+
+        # 4. First name or Last name match (e.g. Dinesh, Dinesh G)
+        user_by_name = User.objects.filter(
+            Q(first_name__icontains=ref_clean) |
+            Q(last_name__icontains=ref_clean) |
+            Q(username__icontains=ref_clean)
+        ).first()
+        if user_by_name:
+            return user_by_name
+
+        # 5. Extract email if embedded in string
+        import re
+        email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', ref_clean)
+        if email_match:
+            found = User.objects.filter(email__iexact=email_match.group(0)).first()
+            if found:
+                return found
+
+        return None

@@ -6,6 +6,7 @@ from django.utils import timezone
 class NotificationType(models.TextChoices):
     TASK_DEADLINE = 'TASK_DEADLINE', 'Task Deadline'
     TASK_ASSIGNED = 'TASK_ASSIGNED', 'Task Assigned'
+    TASK_COMPLETED = 'TASK_COMPLETED', 'Task Completed'
     TASK_OVERDUE = 'TASK_OVERDUE', 'Task Overdue'
     MEETING_REMINDER = 'MEETING_REMINDER', 'Meeting Reminder'
     FOCUS_SESSION_REMINDER = 'FOCUS_SESSION_REMINDER', 'Focus Session Reminder'

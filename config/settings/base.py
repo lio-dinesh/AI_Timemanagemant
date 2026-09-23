@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -72,7 +73,7 @@ INSTALLED_APPS = [
     'apps.audit',
 ]
 
-MIDDLEWARE = [
+MIDDLEWARE = [ 
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -196,23 +197,46 @@ REST_FRAMEWORK = {
 
 # Cache Configuration (Redis with LocMem fallback if redis server unreachable)
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0')
+
+def _is_redis_reachable(url):
+    try:
+        from urllib.parse import urlparse
+        import socket
+        parsed = urlparse(url)
+        host = parsed.hostname or '127.0.0.1'
+        port = parsed.port or 6379
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(0.2)
+        res = s.connect_ex((host, port))
+        s.close()
+        return res == 0
+    except Exception:
+        return False
+
+redis_alive = _is_redis_reachable(REDIS_URL)
+use_locmem = os.environ.get('USE_LOCMEM_CACHE') == 'True' or not redis_alive or 'test' in sys.argv
+
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if os.environ.get('USE_LOCMEM_CACHE') == 'True' else 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': REDIS_URL,
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache' if use_locmem else 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'unique-snowflake' if use_locmem else REDIS_URL,
     }
 }
 
 # Celery Configuration
-CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://127.0.0.1:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://127.0.0.1:6379/0')
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
-CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'False') == 'True'
+CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER') == 'True' or not redis_alive or 'test' in sys.argv
+
+# Fast password hasher for tests
+if 'test' in sys.argv:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
 # Brevo Transactional Email Configuration
 BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')

@@ -60,6 +60,17 @@ def notification_analytics_view(request):
     return render(request, 'notifications/analytics.html', {'analytics': analytics})
 
 
+@login_required
+@require_POST
+def trigger_deadline_check(request):
+    """
+    Manually triggers deadline & overdue reminder scan, dispatching email and in-app alerts.
+    """
+    count = NotificationEngine.scan_and_generate_reminders()
+    messages.success(request, f"Deadline scan complete: {count} notification(s) generated/dispatched.")
+    return redirect('notification_list')
+
+
 # BREVO TRANSACTIONAL EMAIL WEBHOOK (POST /api/integrations/brevo/webhook/)
 @csrf_exempt
 @require_POST

@@ -61,6 +61,91 @@ class NLPParser:
         return cleaned_lower
 
     @classmethod
+    def parse_with_gemini(cls, raw_text: str, user, normalized: str):
+        """
+        Invokes Gemini LLM to intelligently extract intent and rich entities
+        from natural language prompts, especially task creation and assignment.
+        """
+        try:
+            from django.conf import settings
+            from django.utils import timezone
+            import json
+            from apps.ai.services.llm_provider import get_llm_provider, GeminiLLMProvider
+            from apps.accounts.models import User
+
+            provider = get_llm_provider()
+            if not isinstance(provider, GeminiLLMProvider):
+                return None
+
+            now = timezone.now()
+            date_ctx = f"{now.strftime('%Y-%m-%d %H:%M %A')} (ISO: {now.isoformat()})"
+            team = list(User.objects.values('id', 'username', 'email', 'first_name', 'last_name')[:20])
+            team_str = ", ".join([f"{u['username']} <{u['email']}>" for u in team]) if team else "none"
+
+            system = (
+                "You are an expert NLP assistant for the AI Time Management platform.\n"
+                f"Current timestamp: {date_ctx}\n"
+                f"Current logged-in user: {user.username} <{user.email}>\n"
+                f"Available team members: {team_str}\n\n"
+                "Extract the user intent and entities. Output MUST be ONLY valid JSON matching this schema:\n"
+                "{\n"
+                '  "intent": "TASK_CREATE" | "TASK_ASSIGN" | "TASK_COMPLETE" | "TASK_UPDATE" | "TASK_DELETE" | "TASK_SEARCH" | "SCHEDULE_CREATE" | "TIMER_START" | "TIMER_STOP" | "REMINDER_CREATE" | "HELP" | "UNKNOWN",\n'
+                '  "confidence": float,\n'
+                '  "entities": {\n'
+                '    "task_title": string or null,\n'
+                '    "description": string or null,\n'
+                '    "task_id": int or null,\n'
+                '    "priority": int (1-10) or null,\n'
+                '    "category": string or null,\n'
+                '    "date": "YYYY-MM-DD" or null,\n'
+                '    "start_time": "HH:MM" or null,\n'
+                '    "user_reference": string or null,\n'
+                '    "reminder_minutes": int or null\n'
+                "  }\n"
+                "}\n\n"
+                "CRITICAL INSTRUCTIONS:\n"
+                "1. If user says 'assign to X' (e.g. 'assign to liodinesh1905@gmail.com' or 'to Dinesh'), set user_reference to that email/name.\n"
+                "2. If user assigns to themselves or no assignee specified in task creation, user_reference can be current user's email.\n"
+                "3. Compute absolute dates for relative terms (e.g. 'tomorrow' relative to current timestamp).\n"
+                "4. Output JSON ONLY, no extra markdown or explanations."
+            )
+
+            prompt = f"User input command: {raw_text}"
+            res = provider.complete(prompt, system=system)
+            if not res:
+                return None
+
+            data = json.loads(res)
+            intent_str = data.get("intent")
+            if not intent_str or intent_str == "UNKNOWN":
+                return None
+
+            try:
+                valid_intent = IntentType(intent_str)
+            except ValueError:
+                return None
+
+            g_entities = data.get("entities", {})
+            schema_entities = EntitySchema()
+            schema_entities.task_title = g_entities.get("task_title")
+            schema_entities.task_id = g_entities.get("task_id")
+            schema_entities.priority = g_entities.get("priority")
+            schema_entities.category = g_entities.get("category") or "WORK"
+            schema_entities.date = g_entities.get("date")
+            schema_entities.start_time = g_entities.get("start_time")
+            schema_entities.user_reference = g_entities.get("user_reference")
+            schema_entities.reminder_minutes = g_entities.get("reminder_minutes")
+            if g_entities.get("description"):
+                schema_entities.extra["description"] = g_entities.get("description")
+            schema_entities.extra["gemini_parsed"] = True
+
+            conf = float(data.get("confidence", 0.95))
+            return valid_intent, conf, schema_entities
+        except Exception as e:
+            logger.warning("Gemini parsing bypassed (%s). Falling back to heuristic extractor.", e)
+            return None
+
+    @classmethod
     def parse(
         cls,
         raw_text: str,
@@ -106,8 +191,16 @@ class NLPParser:
                 source=source
             )
 
-        # Extract entities using normalized text
-        entities = EntityExtractor.extract_entities(normalized, user, intent=routed_intent.value if isinstance(routed_intent, IntentType) else None)
+        # If fast path, extract with regex extractor immediately
+        if is_fast_path:
+            entities = EntityExtractor.extract_entities(normalized, user, intent=routed_intent.value if isinstance(routed_intent, IntentType) else None)
+        else:
+            # Smart Path: try Gemini LLM first for deep contextual comprehension
+            gemini_result = cls.parse_with_gemini(raw_text, user, normalized)
+            if gemini_result:
+                routed_intent, confidence, entities = gemini_result
+            else:
+                entities = EntityExtractor.extract_entities(normalized, user, intent=routed_intent.value if isinstance(routed_intent, IntentType) else None)
 
         # Lookup intent metadata
         intent_def = get_intent_definition(routed_intent.value if isinstance(routed_intent, IntentType) else str(routed_intent))

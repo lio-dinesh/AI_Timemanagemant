@@ -19,9 +19,11 @@ class CommandRouter:
         (r'^(?:start|begin)\s+timer$', IntentType.TIMER_START),
         (r'^(?:stop|end|pause)\s+timer$', IntentType.TIMER_STOP),
 
-        # Tasks List
+        # Tasks
         (r'^(?:show|list|get|view)\s+(?:all\s+)?(?:my\s+)?tasks$', IntentType.TASK_LIST),
         (r'^(?:my\s+tasks|pending\s+tasks|active\s+tasks)$', IntentType.TASK_LIST),
+        (r'^(?:complete|finish|done\s+with|mark\s+(?:as\s+)?(?:done|complete))\s+(?:the\s+)?task\s+(?:#\s*)?(\d+)$', IntentType.TASK_COMPLETE),
+        (r'^(?:complete|finish)\s+(?:#\s*)?(\d+)$', IntentType.TASK_COMPLETE),
 
         # Schedule
         (r'^(?:show|get|view|check)\s+(?:my\s+)?schedule$', IntentType.SCHEDULE_SEARCH),

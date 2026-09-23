@@ -9,7 +9,16 @@
     <h3 class="fw-bold mt-1 mb-0">{{ task.title }}</h3>
   </div>
   <div class="d-flex gap-2">
-    <form action="{% url 'start_timer' %}" method="post">
+    {% if task.status != 'COMPLETED' %}
+      <form action="{% url 'task_toggle_status' task.id %}" method="post" class="m-0">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="COMPLETED">
+        <button type="submit" class="btn btn-success btn-sm">
+          <i class="bi bi-check-circle me-1"></i> Mark as Completed
+        </button>
+      </form>
+    {% endif %}
+    <form action="{% url 'start_timer' %}" method="post" class="m-0">
       {% csrf_token %}
       <input type="hidden" name="task_id" value="{{ task.id }}">
       <button type="submit" class="btn btn-primary btn-sm">

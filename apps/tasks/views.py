@@ -11,6 +11,7 @@ from apps.tasks.forms import TaskForm
 from apps.tasks.services.task import TaskService
 from apps.projects.models import Project
 from apps.audit.services.auditor import AuditService
+from apps.notifications.services.engine import NotificationEngine
 
 @login_required
 def task_list(request):
@@ -59,6 +60,7 @@ def task_create(request):
                 task.assigned_to = request.user
             task.save()
             AuditService.log('TASK_CREATED', request.user, 'Task', task.id, request, 'SUCCESS')
+            NotificationEngine.notify_task_assigned(task, assigned_by=request.user)
             messages.success(request, f"Task '{task.title}' created.")
             return redirect('task_detail', pk=task.pk)
     else:
@@ -82,6 +84,7 @@ def task_toggle_status(request, pk):
         if new_status == TaskStatus.COMPLETED:
             task.progress = 100
             task.completed_at = timezone.now()
+            NotificationEngine.notify_task_completed(task, completed_by=request.user)
         elif new_status == TaskStatus.IN_PROGRESS and not task.started_at:
             task.started_at = timezone.now()
         task.save(update_fields=['status', 'progress', 'completed_at', 'started_at', 'updated_at'])
@@ -125,6 +128,7 @@ def api_tasks_list_create(request):
                 deadline=payload['deadline'],
                 category=payload.get('category', 'General')
             )
+            NotificationEngine.notify_task_assigned(task, assigned_by=request.user)
             return JsonResponse({'status': 'success', 'task_id': task.id}, status=201)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)

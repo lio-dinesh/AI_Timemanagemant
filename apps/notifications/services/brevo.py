@@ -61,15 +61,15 @@ class BrevoEmailService:
             }
         }
 
-        # Use template ID if available, otherwise raw HTML/text
+        # Use template ID if available, otherwise generated HTML
         if notif.provider_template_id:
             try:
                 payload["templateId"] = int(notif.provider_template_id)
                 payload["params"] = notif.metadata.get("template_params", {})
             except ValueError:
-                payload["htmlContent"] = f"<p>{notif.message}</p>"
+                payload["htmlContent"] = cls.generate_html_email(notif)
         else:
-            payload["htmlContent"] = f"<div style='font-family: Arial, sans-serif;'><h3>{notif.title}</h3><p>{notif.message}</p></div>"
+            payload["htmlContent"] = cls.generate_html_email(notif)
             payload["textContent"] = notif.message
 
         now = timezone.now()
@@ -197,3 +197,123 @@ class BrevoEmailService:
         ])
         logger.info("Updated notification #%s status to %s on Brevo event '%s'", notif.id, notif.delivery_status, event_name)
         return True, "Event processed"
+
+    @classmethod
+    def generate_html_email(cls, notif):
+        """
+        Builds a modern, premium responsive HTML email template for Brevo delivery.
+        """
+        badge_color = "#3b82f6"
+        badge_text = notif.get_notification_type_display()
+        if "ASSIGNED" in notif.notification_type:
+            badge_color = "#8b5cf6"
+        elif "COMPLETED" in notif.notification_type:
+            badge_color = "#10b981"
+        elif "OVERDUE" in notif.notification_type:
+            badge_color = "#ef4444"
+        elif "DEADLINE" in notif.notification_type:
+            badge_color = "#f59e0b"
+
+        action_button = ""
+        if notif.action_url:
+            base_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')
+            full_url = notif.action_url if notif.action_url.startswith('http') else f"{base_url.rstrip('/')}{notif.action_url}"
+            action_button = f"""
+            <div style="margin: 28px 0; text-align: center;">
+                <a href="{full_url}" style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%); color: #ffffff; padding: 12px 28px; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+                    View in AI Time Management &rarr;
+                </a>
+            </div>
+            """
+
+        task_meta = ""
+        if notif.task:
+            priority_val = notif.task.priority
+            priority_color = "#ef4444" if priority_val >= 9 else ("#f59e0b" if priority_val >= 7 else "#10b981")
+            deadline_str = notif.task.deadline.strftime("%B %d, %Y at %I:%M %p") if notif.task.deadline else "No deadline"
+            task_meta = f"""
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <tr>
+                        <td style="color: #64748b; padding: 6px 0; width: 28%;"><strong>Task:</strong></td>
+                        <td style="color: #0f172a; padding: 6px 0; font-weight: 600;">{notif.task.title}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #64748b; padding: 6px 0;"><strong>Priority:</strong></td>
+                        <td style="padding: 6px 0;"><span style="background-color: {priority_color}20; color: {priority_color}; padding: 2px 8px; border-radius: 4px; font-weight: 600;">P{priority_val} / 10</span></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #64748b; padding: 6px 0;"><strong>Category:</strong></td>
+                        <td style="color: #0f172a; padding: 6px 0;">{notif.task.category}</td>
+                    </tr>
+                    <tr>
+                        <td style="color: #64748b; padding: 6px 0;"><strong>Deadline:</strong></td>
+                        <td style="color: #0f172a; padding: 6px 0; font-weight: 600;">{deadline_str}</td>
+                    </tr>
+                </table>
+            </div>
+            """
+
+        recipient = notif.recipient_email or (notif.user.email if notif.user else "")
+        msg_formatted = notif.message.replace('\n', '<br>')
+
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{notif.title}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 40px 10px;">
+  <tr>
+    <td align="center">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08);">
+        <tr>
+          <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 28px 32px; text-align: left;">
+            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td>
+                  <h1 style="margin: 0; color: #ffffff; font-size: 20px; font-weight: 700; letter-spacing: -0.5px;">
+                    &#9201; AI Time Management
+                  </h1>
+                  <p style="margin: 4px 0 0 0; color: #94a3b8; font-size: 13px;">Intelligent Productivity & Task Scheduling</p>
+                </td>
+                <td align="right">
+                  <span style="background-color: {badge_color}; color: #ffffff; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+                    {badge_text}
+                  </span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 32px 32px 24px 32px;">
+            <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 20px; font-weight: 700; line-height: 1.3;">
+              {notif.title}
+            </h2>
+            <p style="margin: 0 0 20px 0; color: #334155; font-size: 15px; line-height: 1.6;">
+              {msg_formatted}
+            </p>
+            {task_meta}
+            {action_button}
+          </td>
+        </tr>
+        <tr>
+          <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 20px 32px; text-align: center;">
+            <p style="margin: 0 0 6px 0; color: #64748b; font-size: 12px;">
+              This notification was generated automatically by the AI Time Management platform.
+            </p>
+            <p style="margin: 0; color: #94a3b8; font-size: 11px;">
+              Recipient: {recipient} &bull; Powered by Gemini AI &amp; Brevo
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>"""
+        return html.strip()

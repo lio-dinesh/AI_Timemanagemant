@@ -100,11 +100,144 @@ class NotificationEngine:
         return created
 
     @staticmethod
+    def notify_task_assigned(task, assigned_by=None):
+        """
+        Dispatches in-app and email notification when a task is created or assigned to a user.
+        """
+        user = task.assigned_to
+        if not user:
+            return []
+
+        by_str = assigned_by.get_full_name() or assigned_by.username if assigned_by else "System"
+        deadline_str = task.deadline.strftime('%b %d, %Y at %I:%M %p') if task.deadline else 'Not set'
+        priority_label = f"P{task.priority}"
+        if task.priority >= 9:
+            priority_label = f"Urgent (P{task.priority})"
+        elif task.priority >= 7:
+            priority_label = f"High (P{task.priority})"
+
+        title = f"New Task Assigned: {task.title}"
+        message = (
+            f"You have been assigned to task '{task.title}' by {by_str}.\n"
+            f"Priority: {priority_label} | Category: {task.category} | Deadline: {deadline_str}."
+        )
+
+        priority = NotificationPriority.URGENT if task.priority >= 9 else (NotificationPriority.HIGH if task.priority >= 7 else NotificationPriority.NORMAL)
+        prefix = f"user-{user.id}-task-{task.id}-assigned-{int(timezone.now().timestamp() // 30)}"
+
+        return NotificationEngine.dispatch_dual_notifications(
+            user=user,
+            title=title,
+            message=message,
+            notification_type=NotificationType.TASK_ASSIGNED,
+            priority=priority,
+            task=task,
+            dedupe_prefix=prefix,
+            action_url=f"/tasks/{task.id}/",
+            metadata={
+                'task_id': task.id,
+                'task_title': task.title,
+                'priority': task.priority,
+                'deadline': task.deadline.isoformat() if task.deadline else None,
+                'assigned_by': by_str
+            }
+        )
+
+    @staticmethod
+    def notify_task_completed(task, completed_by=None):
+        """
+        Dispatches in-app and email notification when a task is marked as COMPLETED.
+        Notifies task creator and/or assignee.
+        """
+        targets = set()
+        if task.created_by:
+            targets.add(task.created_by)
+        if task.assigned_to:
+            targets.add(task.assigned_to)
+
+        by_str = completed_by.get_full_name() or completed_by.username if completed_by else "User"
+        title = f"Task Completed: {task.title}"
+        message = f"Task '{task.title}' has been successfully completed by {by_str}."
+
+        created_notifs = []
+        for user in targets:
+            prefix = f"user-{user.id}-task-{task.id}-completed-{int(timezone.now().timestamp() // 60)}"
+            res = NotificationEngine.dispatch_dual_notifications(
+                user=user,
+                title=title,
+                message=message,
+                notification_type=NotificationType.TASK_COMPLETED,
+                priority=NotificationPriority.NORMAL,
+                task=task,
+                dedupe_prefix=prefix,
+                action_url=f"/tasks/{task.id}/",
+                metadata={'task_id': task.id, 'completed_by': by_str}
+            )
+            created_notifs.extend(res)
+
+        return created_notifs
+
+    @staticmethod
+    def notify_task_deadline(task, window_hours=24):
+        """
+        Dispatches deadline reminder to task assignee.
+        """
+        user = task.assigned_to
+        if not user:
+            return []
+
+        priority = NotificationPriority.URGENT if window_hours <= 1 else NotificationPriority.HIGH
+        deadline_str = task.deadline.strftime('%b %d at %I:%M %p') if task.deadline else ''
+        title = f"{'Urgent: ' if window_hours <= 1 else ''}Task Due in {window_hours} Hour{'s' if window_hours != 1 else ''}: {task.title}"
+        message = f"Task '{task.title}' is due in approximately {window_hours} hour{'s' if window_hours != 1 else ''} ({deadline_str}). Please ensure progress is on track."
+
+        prefix = f"user-{user.id}-task-{task.id}-deadline-{window_hours}h"
+        return NotificationEngine.dispatch_dual_notifications(
+            user=user,
+            title=title,
+            message=message,
+            notification_type=NotificationType.TASK_DEADLINE,
+            priority=priority,
+            task=task,
+            dedupe_prefix=prefix,
+            action_url=f"/tasks/{task.id}/",
+            metadata={'task_id': task.id, 'window_hours': window_hours}
+        )
+
+    @staticmethod
+    def notify_task_overdue(task):
+        """
+        Dispatches overdue warning for tasks past deadline.
+        """
+        user = task.assigned_to
+        if not user:
+            return []
+
+        deadline_str = task.deadline.strftime('%b %d, %Y at %I:%M %p') if task.deadline else ''
+        title = f"Overdue Alert: Task '{task.title}'"
+        message = f"Task '{task.title}' passed its deadline on {deadline_str} and is still pending completion. Please take action immediately."
+
+        today_str = timezone.localdate().isoformat()
+        prefix = f"user-{user.id}-task-{task.id}-overdue-{today_str}"
+        return NotificationEngine.dispatch_dual_notifications(
+            user=user,
+            title=title,
+            message=message,
+            notification_type=NotificationType.TASK_OVERDUE,
+            priority=NotificationPriority.URGENT,
+            task=task,
+            dedupe_prefix=prefix,
+            action_url=f"/tasks/{task.id}/",
+            metadata={'task_id': task.id, 'overdue': True}
+        )
+
+    @staticmethod
     def scan_and_generate_reminders():
         """
         Periodic scanner executed by Celery Beat:
         - Task due in 24 hours
         - Task due in 1 hour
+        - Task overdue
         - Meeting starts in 15 minutes
         """
         now = timezone.now()
@@ -112,25 +245,14 @@ class NotificationEngine:
 
         # 1. Task due in 24h (23h to 24h window)
         t_24h_min = now + timedelta(hours=23)
-        t_24h_max = now + timedelta(hours=24, minutes=5)
+        t_24h_max = now + timedelta(hours=24, minutes=10)
         tasks_24h = Task.objects.filter(
             deadline__range=(t_24h_min, t_24h_max),
             status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS]
         ).select_related('assigned_to')
 
         for task in tasks_24h:
-            user = task.assigned_to
-            prefix = f"user-{user.id}-task-{task.id}-deadline-24h"
-            results = NotificationEngine.dispatch_dual_notifications(
-                user=user,
-                title=f"Task Due in 24 Hours: {task.title}",
-                message=f"Task '{task.title}' is due on {task.deadline.strftime('%b %d at %H:%M')}. Please ensure progress is on track.",
-                notification_type=NotificationType.TASK_DEADLINE,
-                priority=NotificationPriority.HIGH,
-                task=task,
-                dedupe_prefix=prefix,
-                action_url=f"/tasks/{task.id}/"
-            )
+            results = NotificationEngine.notify_task_deadline(task, window_hours=24)
             generated_count += len(results)
 
         # 2. Task due in 1 hour (50m to 65m window)
@@ -142,21 +264,20 @@ class NotificationEngine:
         ).select_related('assigned_to')
 
         for task in tasks_1h:
-            user = task.assigned_to
-            prefix = f"user-{user.id}-task-{task.id}-deadline-1h"
-            results = NotificationEngine.dispatch_dual_notifications(
-                user=user,
-                title=f"Urgent: Task Due in 1 Hour: {task.title}",
-                message=f"Task '{task.title}' is due within the hour ({task.deadline.strftime('%H:%M')}).",
-                notification_type=NotificationType.TASK_DEADLINE,
-                priority=NotificationPriority.URGENT,
-                task=task,
-                dedupe_prefix=prefix,
-                action_url=f"/tasks/{task.id}/"
-            )
+            results = NotificationEngine.notify_task_deadline(task, window_hours=1)
             generated_count += len(results)
 
-        # 3. Schedule Event starting in 15 minutes (10m to 20m window)
+        # 3. Overdue Tasks (deadline in past, not completed or cancelled)
+        overdue_tasks = Task.objects.filter(
+            deadline__lt=now,
+            status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS]
+        ).select_related('assigned_to')[:50]
+
+        for task in overdue_tasks:
+            results = NotificationEngine.notify_task_overdue(task)
+            generated_count += len(results)
+
+        # 4. Schedule Event starting in 15 minutes (10m to 20m window)
         m_15_min = now + timedelta(minutes=10)
         m_15_max = now + timedelta(minutes=20)
         events_15m = ScheduleEvent.objects.filter(

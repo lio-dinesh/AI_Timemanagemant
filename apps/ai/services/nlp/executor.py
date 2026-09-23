@@ -92,7 +92,7 @@ class NLPExecutor:
         session = ContextManager.get_session(user_id, command.conversation_id)
         resolved_entity = None
 
-        if intent_def.category == 'task' or command.intent in (
+        if (intent_def.category == 'task' and command.intent != IntentType.TASK_CREATE.value) or command.intent in (
             IntentType.TIMER_START.value,
             IntentType.SCHEDULE_CREATE.value,
             IntentType.TIME_ENTRY_CREATE.value
@@ -101,7 +101,8 @@ class NLPExecutor:
             if command.entities.task_id or command.entities.task_title or command.intent in (
                 IntentType.TASK_COMPLETE.value,
                 IntentType.TASK_DELETE.value,
-                IntentType.TASK_UPDATE.value
+                IntentType.TASK_UPDATE.value,
+                IntentType.TASK_ASSIGN.value
             ):
                 resolved_entity, candidates, conf = EntityResolver.resolve_task(user, command.entities, session)
                 if candidates:

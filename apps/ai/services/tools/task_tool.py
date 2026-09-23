@@ -4,6 +4,8 @@ from apps.tasks.models import Task, TaskStatus
 from apps.accounts.models import User
 from apps.ai.schemas import EntitySchema, ExecutionResultSchema
 from apps.audit.services.auditor import AuditService
+from apps.notifications.services.engine import NotificationEngine
+from apps.ai.services.nlp.resolver import EntityResolver
 
 
 class TaskTool:
@@ -11,13 +13,23 @@ class TaskTool:
     def create_task(user, entities: EntitySchema) -> ExecutionResultSchema:
         title = entities.task_title or "Untitled Task"
         priority = entities.priority or 5
+        description = entities.extra.get('description', '')
+
+        # Resolve assignee (support assigning to others via NLP e.g. liodinesh1905@gmail.com, Dinesh)
+        assigned_user = EntityResolver.resolve_user(entities.user_reference, user) or user
 
         # Calculate deadline
         now = timezone.now()
         if entities.date:
             try:
                 d = datetime.date.fromisoformat(entities.date)
-                deadline = timezone.make_aware(datetime.datetime.combine(d, datetime.time(18, 0)))
+                hour = 18
+                minute = 0
+                if entities.start_time:
+                    parts = entities.start_time.split(":")
+                    hour = int(parts[0])
+                    minute = int(parts[1]) if len(parts) > 1 else 0
+                deadline = timezone.make_aware(datetime.datetime.combine(d, datetime.time(hour, minute)))
             except Exception:
                 deadline = now + datetime.timedelta(days=1)
         else:
@@ -25,7 +37,8 @@ class TaskTool:
 
         task = Task.objects.create(
             title=title,
-            assigned_to=user,
+            description=description,
+            assigned_to=assigned_user,
             created_by=user,
             priority=priority,
             deadline=deadline,
@@ -39,18 +52,26 @@ class TaskTool:
             resource_type='Task',
             resource_id=task.id,
             status='SUCCESS',
-            metadata={'title': title, 'priority': priority, 'source': 'NLP'}
+            metadata={'title': title, 'priority': priority, 'assigned_to': assigned_user.email, 'source': 'NLP'}
         )
+
+        # Dispatch In-App & Email notification to assignee
+        NotificationEngine.notify_task_assigned(task, assigned_by=user)
+
+        assignee_display = assigned_user.get_full_name() or assigned_user.username
+        assignee_str = f" assigned to {assignee_display}" if assigned_user.id != user.id else ""
+        notif_str = f" Notification sent to {assigned_user.email}." if assigned_user.email else ""
 
         return ExecutionResultSchema(
             success=True,
             action="TASK_CREATE",
             intent="TASK_CREATE",
-            message=f"Created task '{task.title}' with priority {task.priority} (due {deadline.strftime('%b %d, %Y')}).",
+            message=f"Created task '{task.title}' with priority {task.priority}{assignee_str} (due {deadline.strftime('%b %d, %Y')}).{notif_str}",
             data={
                 "task_id": task.id,
                 "title": task.title,
                 "priority": task.priority,
+                "assigned_to": assigned_user.email,
                 "deadline": deadline.isoformat()
             },
             audit_logged=True
@@ -60,7 +81,7 @@ class TaskTool:
     def complete_task(user, entities: EntitySchema, resolved_task: Task = None) -> ExecutionResultSchema:
         task = resolved_task
         if not task and entities.task_id:
-            task = Task.objects.filter(id=entities.task_id, assigned_to=user).first()
+            task = Task.objects.filter(id=entities.task_id).first()
 
         if not task:
             return ExecutionResultSchema(
@@ -71,8 +92,9 @@ class TaskTool:
             )
 
         task.status = TaskStatus.COMPLETED
+        task.progress = 100
         task.completed_at = timezone.now()
-        task.save(update_fields=['status', 'completed_at', 'updated_at'])
+        task.save(update_fields=['status', 'progress', 'completed_at', 'updated_at'])
 
         AuditService.log(
             action='TASK_COMPLETED',
@@ -83,11 +105,14 @@ class TaskTool:
             metadata={'title': task.title, 'source': 'NLP'}
         )
 
+        # Dispatch In-App & Email notification to creator/assignee
+        NotificationEngine.notify_task_completed(task, completed_by=user)
+
         return ExecutionResultSchema(
             success=True,
             action="TASK_COMPLETE",
             intent="TASK_COMPLETE",
-            message=f"Marked task '{task.title}' as COMPLETED.",
+            message=f"Marked task '{task.title}' as COMPLETED. Notification dispatched.",
             data={"task_id": task.id, "title": task.title, "status": task.status},
             audit_logged=True
         )
@@ -218,25 +243,31 @@ class TaskTool:
                 message="Could not find the target task to assign."
             )
 
-        target_username = entities.user_reference or ""
-        assignee = User.objects.filter(username__icontains=target_username).first()
+        assignee = EntityResolver.resolve_user(entities.user_reference, user)
         if not assignee:
+            target_str = entities.user_reference or "specified user"
             return ExecutionResultSchema(
                 success=False,
                 action="TASK_ASSIGN",
                 intent="TASK_ASSIGN",
-                message=f"Could not find user '{target_username}' to assign task."
+                message=f"Could not find user '{target_str}' to assign task."
             )
 
         task.assigned_to = assignee
         task.save(update_fields=['assigned_to', 'updated_at'])
 
+        # Dispatch In-App & Email notification to new assignee
+        NotificationEngine.notify_task_assigned(task, assigned_by=user)
+
+        assignee_name = assignee.get_full_name() or assignee.username
+        notif_info = f" Email notification dispatched to {assignee.email}." if assignee.email else ""
+
         return ExecutionResultSchema(
             success=True,
             action="TASK_ASSIGN",
             intent="TASK_ASSIGN",
-            message=f"Assigned task '{task.title}' to {assignee.get_full_name() or assignee.username}.",
-            data={"task_id": task.id, "assignee_id": assignee.id}
+            message=f"Assigned task '{task.title}' to {assignee_name}.{notif_info}",
+            data={"task_id": task.id, "assignee_id": assignee.id, "assignee_email": assignee.email}
         )
 
     @staticmethod
