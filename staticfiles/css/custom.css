@@ -265,7 +265,16 @@ h1, h2, h3, h4, h5, h6 {
   }
 }
 
-/* Navbar Buttons & Controls */
+/* Navbar Stacking & Controls */
+.navbar {
+  position: relative !important;
+  z-index: 1050 !important;
+}
+
+.navbar .dropdown-menu {
+  z-index: 1060 !important;
+}
+
 .navbar .btn-light {
   background: rgba(255, 255, 255, 0.65) !important;
   border: 1px solid rgba(226, 232, 240, 0.85) !important;
@@ -281,6 +290,57 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(129, 140, 248, 0.4) !important;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 1);
   color: #0f172a;
+}
+
+/* Notification Dropdown Menu Styles */
+.notification-dropdown-menu {
+  box-shadow: 0 20px 48px -8px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(226, 232, 240, 0.9) !important;
+  border: 1px solid rgba(226, 232, 240, 0.8) !important;
+  border-radius: 1rem !important;
+  overflow: hidden !important;
+  z-index: 1060 !important;
+}
+
+.notification-dropdown-body {
+  max-height: 380px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: thin;
+}
+
+.notification-dropdown-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.notification-dropdown-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notification-dropdown-body::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 4px;
+}
+
+.notification-dropdown-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+
+.notification-item {
+  transition: background-color 0.15s ease;
+  color: inherit !important;
+}
+
+.notification-item:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.notification-item.unread {
+  background-color: #f8fafc !important;
+  border-left: 3px solid #4f46e5 !important;
+}
+
+.notification-item.unread:hover {
+  background-color: #eef2ff !important;
 }
 
 /* ==========================================================================
@@ -310,41 +370,54 @@ h1, h2, h3, h4, h5, h6 {
   pointer-events: none;
 }
 
-.nlp-command-input {
-  background: rgba(255, 255, 255, 0.09) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+/* Ultra High Visibility Input for Command Bar */
+#nlp-input,
+.nlp-command-input,
+input#nlp-input.form-control,
+input#nlp-input.form-control:focus {
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  border: 1.5px solid rgba(165, 180, 252, 0.45) !important;
   color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #38bdf8 !important;
   border-radius: 0.85rem 0 0 0.85rem !important;
   padding: 0.85rem 1.25rem !important;
-  font-size: 0.95rem;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.18);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5) !important;
+  transition: all 0.2s ease !important;
 }
 
+#nlp-input::placeholder,
 .nlp-command-input::placeholder {
-  color: rgba(224, 231, 255, 0.65) !important;
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+  opacity: 1 !important;
 }
 
-.nlp-command-input:focus {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: rgba(165, 180, 252, 0.65) !important;
+#nlp-input:focus,
+.nlp-command-input:focus,
+input#nlp-input.form-control:focus {
+  background: #090d16 !important;
+  background-color: #090d16 !important;
+  border-color: #818cf8 !important;
   color: #ffffff !important;
-  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.25), inset 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.4), inset 0 2px 4px rgba(0, 0, 0, 0.6) !important;
 }
 
 #btn-mic {
-  background: rgba(255, 255, 255, 0.09) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: #0f172a !important;
+  border: 1.5px solid rgba(165, 180, 252, 0.45) !important;
   border-left: none !important;
   border-right: none !important;
-  color: #c7d2fe !important;
-  transition: all 0.2s ease;
+  color: #a5b4fc !important;
+  transition: all 0.2s ease !important;
 }
 
 #btn-mic:hover {
-  background: rgba(255, 255, 255, 0.18) !important;
+  background: #1e1b4b !important;
   color: #ffffff !important;
 }
 

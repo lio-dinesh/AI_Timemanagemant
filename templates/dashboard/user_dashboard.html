@@ -19,8 +19,8 @@
     <input type="hidden" name="conversation_id" id="nlp-conversation-id" value="">
     <input type="hidden" name="source" id="nlp-source" value="TEXT">
     <div class="input-group input-group-lg shadow-sm">
-      <input type="text" name="command" id="nlp-input" class="form-control nlp-command-input fs-6" placeholder="Type or click the microphone to speak a command..." autocomplete="off">
-      <button class="btn btn-outline-light px-3" type="button" id="btn-mic" title="Click to speak (Voice Recognition)" onclick="toggleVoiceRecognition()">
+      <input type="text" name="command" id="nlp-input" class="form-control nlp-command-input fs-6" placeholder="Type or click the microphone to speak a command..." autocomplete="off" style="background-color: #0f172a !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #38bdf8 !important;">
+      <button class="btn btn-outline-light px-3" type="button" id="btn-mic" title="Click to speak (Voice Recognition)" onclick="toggleVoiceRecognition()" style="background-color: #0f172a !important; border-color: rgba(165, 180, 252, 0.45) !important;">
         <i class="bi bi-mic-fill" id="mic-icon"></i>
       </button>
       <button class="btn btn-light fw-bold px-4 text-primary" type="submit">

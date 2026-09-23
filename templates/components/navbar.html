@@ -1,4 +1,4 @@
-<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom rounded-3 mb-4 px-3 py-2 shadow-sm d-flex justify-content-between">
+<nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom rounded-3 mb-4 px-3 py-2 shadow-sm d-flex justify-content-between position-relative" style="z-index: 1050;">
   <div class="d-flex align-items-center gap-2">
     <!-- Mobile Sidebar Hamburger Toggle -->
     <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" id="sidebarToggle" aria-label="Toggle navigation" title="Toggle Navigation Menu">
@@ -20,33 +20,75 @@
 
     <!-- Notification Dropdown -->
     <div class="dropdown">
-      <button class="btn btn-light position-relative rounded-circle p-2" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-        <i class="bi bi-bell fs-5"></i>
+      <button class="btn btn-light position-relative rounded-circle p-2" type="button" id="notificationDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+        <i class="bi bi-bell fs-5 text-secondary"></i>
         {% if unread_notifications_count > 0 %}
-          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-white" style="font-size: 0.65rem;">
             {{ unread_notifications_count }}
           </span>
         {% endif %}
       </button>
-      <ul class="dropdown-menu dropdown-menu-end shadow p-2" style="width: 320px;">
-        <li class="d-flex justify-content-between align-items-center px-2 py-1 border-bottom mb-2">
-          <span class="fw-bold small">Notifications</span>
-          <a href="{% url 'notification_list' %}" class="small text-decoration-none">View All</a>
-        </li>
-        {% if recent_notifications %}
-          {% for n in recent_notifications %}
-            <li class="mb-1 p-2 rounded {% if not n.read_at %}bg-light{% endif %}">
-              <div class="d-flex justify-content-between">
-                <span class="fw-semibold small text-truncate" style="max-width: 220px;">{{ n.title }}</span>
-                <span class="text-muted" style="font-size: 0.7rem;">{{ n.scheduled_for|timesince }} ago</span>
-              </div>
-              <p class="text-muted small mb-0 text-truncate">{{ n.message }}</p>
-            </li>
-          {% endfor %}
-        {% else %}
-          <li class="text-center text-muted py-3 small">No recent notifications</li>
-        {% endif %}
-      </ul>
+      <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-0 notification-dropdown-menu" style="width: 380px; z-index: 1060;">
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom bg-light rounded-top-3">
+          <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold small text-dark">Notifications</span>
+            {% if unread_notifications_count > 0 %}
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.7rem;">{{ unread_notifications_count }} new</span>
+            {% endif %}
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <a href="{% url 'mark_all_as_read' %}" class="small text-decoration-none text-muted" style="font-size: 0.75rem;" title="Mark all as read">
+              <i class="bi bi-check2-all"></i> Mark Read
+            </a>
+            <span class="text-muted">·</span>
+            <a href="{% url 'notification_list' %}" class="small text-decoration-none fw-semibold text-primary" style="font-size: 0.75rem;">View All</a>
+          </div>
+        </div>
+        <div class="notification-dropdown-body" style="max-height: 380px; overflow-y: auto; overflow-x: hidden;">
+          {% if recent_notifications %}
+            {% for n in recent_notifications %}
+              <a href="{% if n.action_url %}{{ n.action_url }}{% else %}{% url 'notification_list' %}{% endif %}" class="d-flex gap-2.5 p-2.5 text-decoration-none border-bottom notification-item {% if not n.read_at %}unread bg-light-subtle{% endif %}" style="overflow-x: hidden;">
+                <div class="flex-shrink-0 mt-1">
+                  {% if n.notification_type == 'TASK_ASSIGNED' %}
+                    <span class="badge-icon bg-primary-subtle text-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                      <i class="bi bi-person-check-fill" style="font-size: 0.9rem;"></i>
+                    </span>
+                  {% elif n.notification_type == 'TASK_COMPLETED' %}
+                    <span class="badge-icon bg-success-subtle text-success rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                      <i class="bi bi-check-circle-fill" style="font-size: 0.9rem;"></i>
+                    </span>
+                  {% elif n.notification_type == 'DEADLINE' %}
+                    <span class="badge-icon bg-danger-subtle text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                      <i class="bi bi-alarm-fill" style="font-size: 0.9rem;"></i>
+                    </span>
+                  {% else %}
+                    <span class="badge-icon bg-info-subtle text-info rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                      <i class="bi bi-bell-fill" style="font-size: 0.9rem;"></i>
+                    </span>
+                  {% endif %}
+                </div>
+                <div class="flex-grow-1 min-w-0" style="overflow: hidden;">
+                  <div class="d-flex justify-content-between align-items-baseline mb-0.5 gap-2">
+                    <span class="fw-semibold small text-dark text-truncate d-block" style="max-width: 190px;" title="{{ n.title }}">{{ n.title }}</span>
+                    <span class="text-muted flex-shrink-0" style="font-size: 0.68rem; white-space: nowrap;">{{ n.scheduled_for|timesince }} ago</span>
+                  </div>
+                  <p class="text-muted small mb-0 text-truncate" style="font-size: 0.78rem; max-width: 280px;">{{ n.message }}</p>
+                </div>
+              </a>
+            {% endfor %}
+          {% else %}
+            <div class="text-center text-muted py-4 small">
+              <i class="bi bi-bell-slash fs-4 d-block mb-1 text-muted opacity-50"></i>
+              No recent notifications
+            </div>
+          {% endif %}
+        </div>
+        <div class="p-2 border-top bg-light rounded-bottom-3 text-center">
+          <a href="{% url 'notification_list' %}" class="small text-decoration-none text-primary fw-semibold d-block py-1" style="font-size: 0.8rem;">
+            See all in Notification Center <i class="bi bi-arrow-right ms-1"></i>
+          </a>
+        </div>
+      </div>
     </div>
 
     <!-- User Profile Dropdown -->
