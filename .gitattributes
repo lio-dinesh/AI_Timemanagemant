@@ -1,2 +1,23 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
 # Force shell scripts to use LF line endings
 *.sh text eol=lf
+
+# Force python, html, css, js, json, md, yml files to normalize line endings
+*.py text
+*.html text
+*.css text
+*.js text
+*.json text
+*.md text
+*.yml text
+*.yaml text
+
+# Binary formats
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary

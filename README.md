@@ -1,6 +1,20 @@
 # AI Time Management System (AI TimeSync)
 
-A production-ready, enterprise-grade AI Time Management and Scheduling platform built with Python, Django, MySQL 8.x/InnoDB, Redis, Celery, Brevo Transactional Email API, Bootstrap 5, HTMX, and Chart.js.
+[![CI Pipeline](https://github.com/lio-dinesh/AI_Timemanagemant/actions/workflows/ci.yml/badge.svg)](https://github.com/lio-dinesh/AI_Timemanagemant/actions/workflows/ci.yml)
+[![Python Version](https://img.shields.io/badge/Python-3.11%20%7C%203.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Django](https://img.shields.io/badge/Django-5.1-092E20?logo=django&logoColor=white)](https://www.djangoproject.com/)
+[![AI Engine](https://img.shields.io/badge/AI%20Model-Google%20Gemini%203.6--Flash-8E75C2?logo=google&logoColor=white)](https://ai.google.dev/)
+[![Celery](https://img.shields.io/badge/Celery-Distributed%20Workers-37814A?logo=celery&logoColor=white)](https://docs.celeryq.dev/)
+[![MySQL](https://img.shields.io/badge/Database-MySQL%208.x-4479A1?logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A production-ready, enterprise-grade AI Time Management and Scheduling platform built with Python, Django, MySQL 8.x/InnoDB, Redis, Celery, Google Gemini 3.6 Flash NLP, Brevo Transactional Email API, Bootstrap 5, HTMX, and Chart.js.
+
+### 🌐 GitHub Repository
+```bash
+git clone https://github.com/lio-dinesh/AI_Timemanagemant.git
+cd AI_Timemanagemant
+```
 
 ---
 
