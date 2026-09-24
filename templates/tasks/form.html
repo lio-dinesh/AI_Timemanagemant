@@ -10,12 +10,29 @@
       <a href="{% url 'task_list' %}" class="btn btn-outline-secondary btn-sm">Cancel</a>
     </div>
 
+    {% if form.errors %}
+      <div class="alert alert-danger shadow-sm mb-4" role="alert">
+        <div class="fw-bold mb-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> Please correct the errors below:</div>
+        <ul class="mb-0 ps-3">
+          {% for field in form %}
+            {% for error in field.errors %}
+              <li><strong>{{ field.label }}:</strong> {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+          {% for error in form.non_field_errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
     <div class="card shadow-sm p-4">
       <form method="post">
         {% csrf_token %}
         <div class="mb-3">
-          <label class="form-label small fw-semibold">Task Title</label>
+          <label class="form-label small fw-semibold">Task Title <span class="text-danger">*</span></label>
           {{ form.title }}
+          {% if form.title.errors %}<div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>{% endif %}
         </div>
         <div class="mb-3">
           <label class="form-label small fw-semibold">Description</label>
@@ -23,31 +40,48 @@
         </div>
         <div class="row g-3 mb-3">
           <div class="col-md-6">
-            <label class="form-label small fw-semibold">Project</label>
-            {{ form.project }}
+            <label class="form-label small fw-semibold">Assigned To</label>
+            {{ form.assigned_to }}
+            <div class="form-text small">Leave as "Assign to Me" or select another team member.</div>
           </div>
           <div class="col-md-6">
-            <label class="form-label small fw-semibold">Category</label>
-            {{ form.category }}
+            <label class="form-label small fw-semibold">Project</label>
+            {{ form.project }}
           </div>
         </div>
         <div class="row g-3 mb-3">
           <div class="col-md-4">
-            <label class="form-label small fw-semibold">Priority (1-10)</label>
+            <label class="form-label small fw-semibold">Category</label>
+            {{ form.category }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Priority (1 = Lowest, 10 = Urgent)</label>
             {{ form.priority }}
           </div>
           <div class="col-md-4">
-            <label class="form-label small fw-semibold">Estimated Seconds</label>
-            {{ form.estimated_seconds }}
-          </div>
-          <div class="col-md-4">
-            <label class="form-label small fw-semibold">Deadline</label>
-            {{ form.deadline }}
+            <label class="form-label small fw-semibold">Initial Status</label>
+            {{ form.status }}
           </div>
         </div>
-        <button type="submit" class="btn btn-primary px-4 fw-semibold mt-2">
-          Save Task
-        </button>
+        <div class="row g-3 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Estimated Seconds (e.g., 3600 = 1 hr)</label>
+            {{ form.estimated_seconds }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold">Deadline <span class="text-danger">*</span></label>
+            {{ form.deadline }}
+            {% if form.deadline.errors %}<div class="text-danger small mt-1">{{ form.deadline.errors.0 }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="d-flex gap-2 mt-2">
+          <button type="submit" class="btn btn-primary px-4 fw-semibold">
+            <i class="bi bi-check-lg me-1"></i> Save Task
+          </button>
+          <a href="{% url 'task_list' %}" class="btn btn-outline-secondary px-3">
+            Cancel
+          </a>
+        </div>
       </form>
     </div>
   </div>

@@ -51,23 +51,43 @@ def task_detail(request, pk):
 
 @login_required
 def task_create(request):
+    projects_qs = Project.objects.all() if request.user.is_admin_role else Project.objects.filter(owner=request.user)
+
     if request.method == 'POST':
         form = TaskForm(request.POST)
+        form.fields['project'].queryset = projects_qs
         if form.is_valid():
             task = form.save(commit=False)
             task.created_by = request.user
             if not task.assigned_to_id:
                 task.assigned_to = request.user
+            if not task.status:
+                task.status = TaskStatus.TODO
+            if task.progress is None:
+                task.progress = 0
+            if not task.category:
+                task.category = 'General'
+            if not task.estimated_seconds:
+                task.estimated_seconds = 3600
             task.save()
-            AuditService.log('TASK_CREATED', request.user, 'Task', task.id, request, 'SUCCESS')
+            AuditService.log('TASK_CREATED', request.user, 'Task', task.id, request, 'SUCCESS', metadata={'title': task.title, 'priority': task.priority})
             NotificationEngine.notify_task_assigned(task, assigned_by=request.user)
-            messages.success(request, f"Task '{task.title}' created.")
+            messages.success(request, f"Task '{task.title}' created successfully.")
             return redirect('task_detail', pk=task.pk)
+        else:
+            messages.error(request, "Failed to create task. Please check the highlighted form errors below.")
     else:
-        initial = {'assigned_to': request.user}
+        initial = {
+            'assigned_to': request.user,
+            'status': TaskStatus.TODO,
+            'progress': 0,
+            'category': 'General',
+            'estimated_seconds': 3600
+        }
         if request.GET.get('project_id'):
             initial['project'] = request.GET.get('project_id')
         form = TaskForm(initial=initial)
+        form.fields['project'].queryset = projects_qs
 
     return render(request, 'tasks/form.html', {'form': form, 'title': 'Create Task'})
 
@@ -117,17 +137,30 @@ def api_tasks_list_create(request):
     elif request.method == 'POST':
         try:
             payload = json.loads(request.body)
+            raw_deadline = payload.get('deadline')
+            deadline = None
+            if raw_deadline:
+                from django.utils.dateparse import parse_datetime
+                parsed_dt = parse_datetime(str(raw_deadline))
+                if parsed_dt:
+                    deadline = timezone.make_aware(parsed_dt) if timezone.is_naive(parsed_dt) else parsed_dt
+            if not deadline:
+                deadline = timezone.now() + timezone.timedelta(days=1)
+
             task = Task.objects.create(
                 created_by=request.user,
-                assigned_to_id=payload.get('assigned_to_id', request.user.id),
+                assigned_to_id=payload.get('assigned_to_id') or request.user.id,
                 project_id=payload.get('project_id'),
                 title=payload['title'],
                 description=payload.get('description', ''),
                 status=payload.get('status', TaskStatus.TODO),
                 priority=int(payload.get('priority', 5)),
-                deadline=payload['deadline'],
+                progress=int(payload.get('progress', 0)),
+                estimated_seconds=int(payload.get('estimated_seconds', 3600)),
+                deadline=deadline,
                 category=payload.get('category', 'General')
             )
+            AuditService.log('TASK_CREATED', request.user, 'Task', task.id, request, 'SUCCESS', metadata={'title': task.title, 'source': 'REST_API'})
             NotificationEngine.notify_task_assigned(task, assigned_by=request.user)
             return JsonResponse({'status': 'success', 'task_id': task.id}, status=201)
         except Exception as e:

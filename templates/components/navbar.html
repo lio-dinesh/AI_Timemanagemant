@@ -1,9 +1,18 @@
+{% load static %}
 <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom rounded-3 mb-4 px-3 py-2 shadow-sm d-flex justify-content-between position-relative" style="z-index: 1050;">
   <div class="d-flex align-items-center gap-2">
     <!-- Mobile Sidebar Hamburger Toggle -->
     <button class="btn btn-sm btn-outline-secondary d-lg-none" type="button" id="sidebarToggle" aria-label="Toggle navigation" title="Toggle Navigation Menu">
       <i class="bi bi-list fs-5"></i>
     </button>
+    <!-- Mobile Brand Display -->
+    <div class="d-flex d-lg-none align-items-center me-2">
+      <div class="logo-breathing-wrap navbar-logo-wrap me-2">
+        <div class="logo-breathing-halo"></div>
+        <img src="{% static 'img/logo.png' %}" alt="AI TimeSync" class="logo-breathing-img navbar-logo" />
+      </div>
+      <span class="fw-bold fs-6 brand-title">AI <span class="text-gradient-cyan">TimeSync</span></span>
+    </div>
     <!-- Active Timer Widget -->
     <div id="navbar-timer-container">
       {% include 'components/timer_widget.html' %}

@@ -77,35 +77,27 @@ class GeminiLLMProvider(BaseLLMProvider):
         }
 
         import time
-        for attempt in range(2):
-            try:
-                response = requests.post(url, json=payload, headers=headers, timeout=12)
-                if response.status_code == 200:
-                    data = response.json()
-                    candidates = data.get("candidates", [])
-                    if candidates:
-                        parts = candidates[0].get("content", {}).get("parts", [])
-                        if parts:
-                            text_response = parts[0].get("text", "").strip()
-                            # Clean markdown json fences if present
-                            match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text_response)
-                            if match:
-                                return match.group(1).strip()
-                            brace_match = re.search(r'(\{[\s\S]*\})', text_response)
-                            if brace_match:
-                                return brace_match.group(1).strip()
-                            return text_response
+        try:
+            response = requests.post(url, json=payload, headers=headers, timeout=4)
+            if response.status_code == 200:
+                data = response.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        text_response = parts[0].get("text", "").strip()
+                        # Clean markdown json fences if present
+                        match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text_response)
+                        if match:
+                            return match.group(1).strip()
+                        brace_match = re.search(r'(\{[\s\S]*\})', text_response)
+                        if brace_match:
+                            return brace_match.group(1).strip()
+                        return text_response
 
-                if response.status_code == 503 and attempt == 0:
-                    time.sleep(1.0)
-                    continue
-
-                logger.warning("Gemini API call failed (%s): %s. Falling back to Mock.", response.status_code, response.text[:200])
-            except Exception as exc:
-                if attempt == 0:
-                    time.sleep(0.5)
-                    continue
-                logger.warning("Gemini API exception (%s). Falling back to Mock.", exc)
+            logger.warning("Gemini API call failed (%s): %s. Falling back to Mock.", response.status_code, response.text[:200])
+        except Exception as exc:
+            logger.warning("Gemini API exception (%s). Falling back to Mock.", exc)
 
         return self.fallback.complete(prompt, system)
 
@@ -151,10 +143,11 @@ class OpenAILLMProvider(BaseLLMProvider):
 
 
 def get_llm_provider() -> BaseLLMProvider:
+    import sys
     provider_name = getattr(settings, 'AI_PROVIDER', 'mock').lower()
     api_key = getattr(settings, 'AI_API_KEY', '') or os.environ.get('AI_API_KEY', '')
 
-    if not api_key or provider_name == 'mock':
+    if 'test' in sys.argv or not api_key or provider_name == 'mock':
         return MockLLMProvider()
 
     if provider_name == 'gemini':

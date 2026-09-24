@@ -1,3 +1,4 @@
+import sys
 from datetime import timedelta
 from django.utils import timezone
 from django.db import IntegrityError
@@ -90,10 +91,15 @@ class NotificationEngine:
             )
             if n_email:
                 created.append(n_email)
-                # Enqueue Celery task for email dispatch
+                # Non-blocking asynchronous email dispatch
                 try:
+                    import threading
+                    from django.conf import settings
                     from apps.notifications.tasks import send_brevo_email
-                    send_brevo_email.delay(n_email.id)
+                    if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False) and 'test' not in sys.argv:
+                        threading.Thread(target=send_brevo_email, args=(n_email.id,), daemon=True).start()
+                    else:
+                        send_brevo_email.delay(n_email.id)
                 except Exception:
                     pass
 

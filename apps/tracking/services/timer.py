@@ -120,12 +120,18 @@ class TimerService:
             if entry.task_id:
                 TaskService.recalculate_task_actual_seconds(entry.task_id)
 
-            # Queue asynchronous daily productivity aggregation
+            # Queue asynchronous daily productivity aggregation (non-blocking)
             try:
+                import sys
+                import threading
+                from django.conf import settings
                 from apps.analytics.tasks import calculate_daily_productivity
-                calculate_daily_productivity.delay(user.id, entry.started_at.strftime('%Y-%m-%d'))
+                date_str = entry.started_at.strftime('%Y-%m-%d')
+                if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False) and 'test' not in sys.argv:
+                    threading.Thread(target=calculate_daily_productivity, args=(user.id, date_str), daemon=True).start()
+                else:
+                    calculate_daily_productivity.delay(user.id, date_str)
             except Exception:
-                # If Celery worker is offline, synchronous fallback or eager execution handles it
                 pass
 
             AuditService.log(
@@ -185,8 +191,15 @@ class TimerService:
                 TaskService.recalculate_task_actual_seconds(task.id)
 
             try:
+                import sys
+                import threading
+                from django.conf import settings
                 from apps.analytics.tasks import calculate_daily_productivity
-                calculate_daily_productivity.delay(user.id, start_time.strftime('%Y-%m-%d'))
+                date_str = start_time.strftime('%Y-%m-%d')
+                if getattr(settings, 'CELERY_TASK_ALWAYS_EAGER', False) and 'test' not in sys.argv:
+                    threading.Thread(target=calculate_daily_productivity, args=(user.id, date_str), daemon=True).start()
+                else:
+                    calculate_daily_productivity.delay(user.id, date_str)
             except Exception:
                 pass
 
