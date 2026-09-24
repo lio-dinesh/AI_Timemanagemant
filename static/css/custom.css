@@ -1002,26 +1002,32 @@ input#nlp-input.form-control:focus {
 
 /* Sidebar Logo */
 .sidebar-logo-wrap {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
   flex-shrink: 0;
 }
 .sidebar-logo {
-  width: 42px;
-  height: 42px;
+  width: 40px;
+  height: 40px;
   border-radius: 10px;
+  object-fit: cover;
+  display: block;
 }
 
 /* Navbar Logo (Mobile View) */
 .navbar-logo-wrap {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
   flex-shrink: 0;
 }
 .navbar-logo {
   width: 34px;
   height: 34px;
   border-radius: 8px;
+  object-fit: cover;
+  display: block;
 }
 
 /* Hero / Authentication Screen Logo */
@@ -1059,10 +1065,11 @@ input#nlp-input.form-control:focus {
   -webkit-text-fill-color: transparent;
 }
 .brand-subtitle {
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
+  font-size: 0.58rem;
+  letter-spacing: 0.05em;
   color: #94a3b8;
   font-weight: 600;
   margin-top: 1px;
+  white-space: nowrap;
 }
 
