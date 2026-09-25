@@ -12,7 +12,9 @@ ALLOWED_HOSTS = [
     ).split(',') if h.strip()
 ]
 if '*' not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.extend(['.onrender.com', '.vercel.app', '.pythonanywhere.com', 'ai-timemanagemant.vercel.app', 'ai-timemanagemant.onrender.com', 'localhost', '127.0.0.1'])
+    ALLOWED_HOSTS.extend(['.onrender.com', '.vercel.app', '.pythonanywhere.com', 'ai-timemanagemant.vercel.app', 'ai-timemanagemant.onrender.com', 'localhost', '127.0.0.1', 'testserver'])
+elif 'testserver' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append('testserver')
 
 CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
@@ -32,12 +34,16 @@ if custom_csrf:
 
 
 # Database Configuration (Auto-detect DATABASE_URL from Neon, Supabase, Render, Railway)
+is_serverless = bool(os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'))
 database_url = os.environ.get('DATABASE_URL')
+
 if database_url:
+    # Serverless (Vercel) lambda workers shouldn't maintain persistent connections to prevent connection pool starvation
+    conn_max_age = 0 if is_serverless else int(os.environ.get('DB_CONN_MAX_AGE', '600'))
     try:
         import dj_database_url
         DATABASES = {
-            'default': dj_database_url.parse(database_url, conn_max_age=600, ssl_require=True)
+            'default': dj_database_url.parse(database_url, conn_max_age=conn_max_age, ssl_require=True)
         }
     except ImportError:
         parsed_db = urlparse(database_url)
@@ -53,23 +59,32 @@ if database_url:
                 'PASSWORD': parsed_db.password or '',
                 'HOST': parsed_db.hostname or 'localhost',
                 'PORT': str(parsed_db.port or (3306 if 'mysql' in engine else 5432)),
+                'CONN_MAX_AGE': conn_max_age,
             }
         }
-        if 'mysql' in engine:
-            DATABASES['default']['OPTIONS'] = {
-                'charset': 'utf8mb4',
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES', innodb_strict_mode=1;",
-            }
-        else:
-            DATABASES['default']['OPTIONS'] = {
-                'sslmode': 'require',
-            }
+
+    # High-concurrency & PgBouncer / Neon connection pooler compatibility
+    db_engine = DATABASES['default'].get('ENGINE', '')
+    if 'postgresql' in db_engine:
+        options = DATABASES['default'].setdefault('OPTIONS', {})
+        options['sslmode'] = 'require'
+        # Crucial for PgBouncer / Neon transaction pooling mode with multiple simultaneous users
+        options['DISABLE_SERVER_SIDE_CURSORS'] = True
+    elif 'mysql' in db_engine:
+        DATABASES['default']['OPTIONS'] = {
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES', innodb_strict_mode=1;",
+        }
+
+    # Automatically check database connection health for pooled connections
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 else:
-    # Build-phase fallback: Use SQLite so collectstatic never attempts a remote database connection
+    # Build-phase / unconfigured fallback: Use writable /tmp on serverless environments
+    sqlite_path = '/tmp/db.sqlite3' if is_serverless else (BASE_DIR / 'db.sqlite3')
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'NAME': sqlite_path,
         }
     }
 

@@ -110,12 +110,14 @@ WSGI_APPLICATION = 'config.wsgi.application'
 ASGI_APPLICATION = 'config.asgi.application'
 
 # Database Configuration (Auto-detect DATABASE_URL from Neon/Cloud, fallback to MySQL or SQLite)
+is_serverless = bool(os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'))
 database_url = os.environ.get('DATABASE_URL')
 if database_url:
+    conn_max_age = 0 if is_serverless else int(os.environ.get('DB_CONN_MAX_AGE', '600'))
     try:
         import dj_database_url
         DATABASES = {
-            'default': dj_database_url.parse(database_url, conn_max_age=600, ssl_require=True)
+            'default': dj_database_url.parse(database_url, conn_max_age=conn_max_age, ssl_require=True)
         }
     except Exception:
         from urllib.parse import urlparse
@@ -128,16 +130,22 @@ if database_url:
                 'PASSWORD': parsed_db.password or '',
                 'HOST': parsed_db.hostname or 'localhost',
                 'PORT': str(parsed_db.port or 5432),
+                'CONN_MAX_AGE': conn_max_age,
             }
         }
+    db_engine = DATABASES['default'].get('ENGINE', '')
+    if 'postgresql' in db_engine:
+        DATABASES['default'].setdefault('OPTIONS', {})['DISABLE_SERVER_SIDE_CURSORS'] = True
+    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 else:
     DB_ENGINE = os.environ.get('DB_ENGINE', 'mysql').lower()
-    if DB_ENGINE == 'sqlite3' or os.environ.get('RENDER') or os.environ.get('VERCEL'):
+    if DB_ENGINE == 'sqlite3' or os.environ.get('RENDER') or is_serverless:
+        sqlite_path = '/tmp/db.sqlite3' if is_serverless else (BASE_DIR / 'db.sqlite3')
         DATABASES = {
             'default': {
                 'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-                'CONN_MAX_AGE': 600,
+                'NAME': sqlite_path,
+                'CONN_MAX_AGE': 0 if is_serverless else 600,
             }
         }
     else:

@@ -60,7 +60,12 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: #0f172a;
   letter-spacing: -0.02em;
   font-weight: 700;
@@ -123,9 +128,11 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateX(-100%);
     box-shadow: 10px 0 30px rgba(0, 0, 0, 0.35) !important;
   }
+
   .app-sidebar.show {
     transform: translateX(0) !important;
   }
+
   .main-content {
     margin-left: 0 !important;
     padding: 1rem 1.25rem !important;
@@ -257,9 +264,11 @@ h1, h2, h3, h4, h5, h6 {
   0% {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
   }
+
   70% {
     box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
   }
+
   100% {
     box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
   }
@@ -522,11 +531,25 @@ input#nlp-input.form-control:focus {
   border-radius: 4px;
 }
 
-.kpi-card.border-primary::before { background: linear-gradient(180deg, #6366f1, #4f46e5); }
-.kpi-card.border-success::before { background: linear-gradient(180deg, #34d399, #10b981); }
-.kpi-card.border-info::before { background: linear-gradient(180deg, #38bdf8, #06b6d4); }
-.kpi-card.border-danger::before { background: linear-gradient(180deg, #f87171, #ef4444); }
-.kpi-card.border-secondary::before { background: linear-gradient(180deg, #94a3b8, #64748b); }
+.kpi-card.border-primary::before {
+  background: linear-gradient(180deg, #6366f1, #4f46e5);
+}
+
+.kpi-card.border-success::before {
+  background: linear-gradient(180deg, #34d399, #10b981);
+}
+
+.kpi-card.border-info::before {
+  background: linear-gradient(180deg, #38bdf8, #06b6d4);
+}
+
+.kpi-card.border-danger::before {
+  background: linear-gradient(180deg, #f87171, #ef4444);
+}
+
+.kpi-card.border-secondary::before {
+  background: linear-gradient(180deg, #94a3b8, #64748b);
+}
 
 .kpi-value {
   font-size: 2.15rem;
@@ -814,8 +837,15 @@ input#nlp-input.form-control:focus {
 }
 
 @keyframes dropdownFade {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dropdown-item {
@@ -914,8 +944,17 @@ input#nlp-input.form-control:focus {
 }
 
 @keyframes pulseIcon {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.92); }
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.92);
+  }
 }
 
 .progress {
@@ -939,10 +978,12 @@ input#nlp-input.form-control:focus {
     transform: scale(0.96) translateZ(0);
     filter: drop-shadow(0 0 8px rgba(79, 70, 229, 0.45)) drop-shadow(0 0 16px rgba(6, 182, 212, 0.25));
   }
+
   50% {
     transform: scale(1.05) translateZ(0);
     filter: drop-shadow(0 0 22px rgba(79, 70, 229, 0.85)) drop-shadow(0 0 38px rgba(6, 182, 212, 0.65)) drop-shadow(0 0 55px rgba(168, 85, 247, 0.4));
   }
+
   100% {
     transform: scale(0.96) translateZ(0);
     filter: drop-shadow(0 0 8px rgba(79, 70, 229, 0.45)) drop-shadow(0 0 16px rgba(6, 182, 212, 0.25));
@@ -955,11 +996,13 @@ input#nlp-input.form-control:focus {
     opacity: 0.35;
     background: radial-gradient(circle, rgba(99, 102, 241, 0.55) 0%, rgba(6, 182, 212, 0.25) 50%, transparent 72%);
   }
+
   50% {
     transform: scale(1.28) translateZ(0);
     opacity: 0.9;
     background: radial-gradient(circle, rgba(99, 102, 241, 0.85) 0%, rgba(6, 182, 212, 0.55) 45%, rgba(168, 85, 247, 0.3) 65%, transparent 78%);
   }
+
   100% {
     transform: scale(0.85) translateZ(0);
     opacity: 0.35;
@@ -1007,6 +1050,7 @@ input#nlp-input.form-control:focus {
   min-width: 40px;
   flex-shrink: 0;
 }
+
 .sidebar-logo {
   width: 40px;
   height: 40px;
@@ -1022,6 +1066,7 @@ input#nlp-input.form-control:focus {
   min-width: 34px;
   flex-shrink: 0;
 }
+
 .navbar-logo {
   width: 34px;
   height: 34px;
@@ -1036,10 +1081,12 @@ input#nlp-input.form-control:focus {
   height: 120px;
   margin: 0 auto;
 }
+
 .hero-logo-wrap .logo-breathing-halo {
   inset: -24px;
   filter: blur(16px);
 }
+
 .hero-logo {
   width: 112px;
   height: 112px;
@@ -1051,19 +1098,23 @@ input#nlp-input.form-control:focus {
 .brand-header-link {
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
+
 .brand-header-link:hover {
   opacity: 0.95;
   transform: translateX(2px);
 }
+
 .brand-title {
   letter-spacing: -0.03em;
   line-height: 1.15;
 }
+
 .text-gradient-cyan {
   background: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+
 .brand-subtitle {
   font-size: 0.58rem;
   letter-spacing: 0.05em;
@@ -1072,4 +1123,3 @@ input#nlp-input.form-control:focus {
   margin-top: 1px;
   white-space: nowrap;
 }
-
