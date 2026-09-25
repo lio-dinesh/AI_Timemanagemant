@@ -135,7 +135,7 @@ if database_url:
         }
     db_engine = DATABASES['default'].get('ENGINE', '')
     if 'postgresql' in db_engine:
-        DATABASES['default'].setdefault('OPTIONS', {})['DISABLE_SERVER_SIDE_CURSORS'] = True
+        DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 else:
     DB_ENGINE = os.environ.get('DB_ENGINE', 'mysql').lower()

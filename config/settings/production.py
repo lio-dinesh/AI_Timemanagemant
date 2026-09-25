@@ -69,7 +69,7 @@ if database_url:
         options = DATABASES['default'].setdefault('OPTIONS', {})
         options['sslmode'] = 'require'
         # Crucial for PgBouncer / Neon transaction pooling mode with multiple simultaneous users
-        options['DISABLE_SERVER_SIDE_CURSORS'] = True
+        DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
     elif 'mysql' in db_engine:
         DATABASES['default']['OPTIONS'] = {
             'charset': 'utf8mb4',
