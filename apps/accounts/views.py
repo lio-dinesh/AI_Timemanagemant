@@ -43,21 +43,27 @@ def logout_view(request):
 
 
 def register_view(request):
-    if request.user.is_authenticated:
-        return redirect('user_dashboard')
+    try:
+        if request.user.is_authenticated:
+            return redirect('user_dashboard')
+    except Exception:
+        return redirect('setup_database')
 
     if request.method == 'POST':
         form = RegisterForm(request.POST)
-        if form.is_valid():
-            try:
+        try:
+            if form.is_valid():
                 user = form.save(commit=False)
+                user.email = form.cleaned_data['email']
+                user.username = form.cleaned_data['username']
+                user.timezone = form.cleaned_data.get('timezone') or 'UTC'
                 user.set_password(form.cleaned_data['password'])
                 user.save()
                 login(request, user)
-                messages.success(request, "Account created successfully!")
+                messages.success(request, f"Welcome to AI TimeSync, {user.first_name or user.username}! Your account has been created.")
                 return redirect('user_dashboard')
-            except Exception as e:
-                messages.error(request, f"Registration error: {str(e)}")
+        except Exception as e:
+            messages.error(request, f"Registration error: {str(e)}")
     else:
         form = RegisterForm()
 

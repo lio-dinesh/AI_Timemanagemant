@@ -57,6 +57,25 @@ class AccountsTestCase(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Create Your Account')
 
+    def test_user_signup_successful(self):
+        signup_data = {
+            'first_name': 'Sarah',
+            'last_name': 'Connor',
+            'email': 'sarah@example.com',
+            'username': 'sarahc',
+            'role': UserRole.EMPLOYEE,
+            'timezone': 'UTC',
+            'password': 'SecurePassword123!',
+            'confirm_password': 'SecurePassword123!'
+        }
+        response = self.client.post('/register/', data=signup_data)
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/analytics/dashboard/')
+        self.assertTrue(User.objects.filter(email='sarah@example.com').exists())
+        created_user = User.objects.get(email='sarah@example.com')
+        self.assertEqual(created_user.first_name, 'Sarah')
+        self.assertTrue(created_user.check_password('SecurePassword123!'))
+
     def test_health_check_endpoint(self):
         response = self.client.get('/health/')
         self.assertEqual(response.status_code, 200)

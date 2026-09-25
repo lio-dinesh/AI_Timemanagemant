@@ -18,6 +18,13 @@
     <div class="card auth-glass-card shadow-sm border-0 p-4">
       <form method="post" novalidate>
         {% csrf_token %}
+
+        {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2 small mb-3">
+            {{ form.non_field_errors }}
+          </div>
+        {% endif %}
+
         <div class="row g-2 mb-3">
           <div class="col-6">
             <label class="form-label small fw-semibold">First Name</label>
@@ -38,7 +45,7 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label small fw-semibold">Username</label>
+          <label class="form-label small fw-semibold">Username <span class="text-muted fw-normal">(Optional)</span></label>
           {{ form.username }}
           {% if form.username.errors %}
             <div class="text-danger small mt-1">{{ form.username.errors }}</div>
@@ -59,6 +66,9 @@
         <div class="mb-3">
           <label class="form-label small fw-semibold">Password</label>
           {{ form.password }}
+          {% if form.password.errors %}
+            <div class="text-danger small mt-1">{{ form.password.errors }}</div>
+          {% endif %}
         </div>
 
         <div class="mb-4">
