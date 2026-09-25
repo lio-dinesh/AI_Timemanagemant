@@ -26,6 +26,37 @@ class BrevoEmailService:
         return getattr(settings, 'BREVO_WEBHOOK_TOKEN', '') or os.environ.get('BREVO_WEBHOOK_TOKEN', '')
 
     @classmethod
+    def get_site_url(cls):
+        """
+        Determines the public domain URL for generated email action links.
+        Priority:
+        1. Explicit settings.SITE_URL or env SITE_URL/APP_URL
+        2. Vercel deployment production domain
+        3. Render deployment production domain
+        4. Production fallback: https://ai-timemanagemant.vercel.app
+        5. Local development fallback: http://127.0.0.1:8000
+        """
+        site_url = getattr(settings, 'SITE_URL', None) or os.environ.get('SITE_URL') or os.environ.get('APP_URL')
+        if site_url:
+            return site_url.rstrip('/')
+
+        if os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+            vercel_url = os.environ.get('VERCEL_PROJECT_PRODUCTION_URL') or os.environ.get('VERCEL_URL')
+            if vercel_url:
+                prefix = "" if vercel_url.startswith('http') else "https://"
+                return f"{prefix}{vercel_url}".rstrip('/')
+            return "https://ai-timemanagemant.vercel.app"
+
+        render_host = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+        if render_host:
+            return f"https://{render_host}".rstrip('/')
+
+        if not getattr(settings, 'DEBUG', True):
+            return "https://ai-timemanagemant.vercel.app"
+
+        return "http://127.0.0.1:8000"
+
+    @classmethod
     def send_transactional_email(cls, notification_id, timeout=8):
         """
         Sends transactional email via Brevo REST API (POST /v3/smtp/email).
@@ -217,7 +248,7 @@ class BrevoEmailService:
 
         action_button = ""
         if notif.action_url:
-            base_url = getattr(settings, 'SITE_URL', 'http://127.0.0.1:8000')
+            base_url = cls.get_site_url()
             full_url = notif.action_url if notif.action_url.startswith('http') else f"{base_url.rstrip('/')}{notif.action_url}"
             action_button = f"""
             <div style="margin: 28px 0; text-align: center;">
@@ -255,7 +286,7 @@ class BrevoEmailService:
             </div>
             """
 
-        recipient = notif.recipient_email or (notif.user.email if notif.user else "")
+        recipient = notif.recipient_email or (notif.user.email if getattr(notif, 'user_id', None) else "")
         msg_formatted = notif.message.replace('\n', '<br>')
 
         html = f"""<!DOCTYPE html>

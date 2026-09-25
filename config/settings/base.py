@@ -253,6 +253,7 @@ if 'test' in sys.argv:
     PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
 # Brevo Transactional Email Configuration
+SITE_URL = os.environ.get('SITE_URL') or os.environ.get('APP_URL') or ('https://ai-timemanagemant.vercel.app' if (os.environ.get('VERCEL') or not DEBUG) else 'http://127.0.0.1:8000')
 BREVO_API_KEY = os.environ.get('BREVO_API_KEY', '')
 BREVO_SENDER_EMAIL = os.environ.get('BREVO_SENDER_EMAIL', 'noreply@aitimemanagement.com')
 BREVO_SENDER_NAME = os.environ.get('BREVO_SENDER_NAME', 'AI Time Management')

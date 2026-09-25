@@ -138,3 +138,7 @@ else:
         }
     }
 
+# Public Site URL for emails and notification action links
+SITE_URL = os.environ.get('SITE_URL') or os.environ.get('APP_URL') or 'https://ai-timemanagemant.vercel.app'
+
+
