@@ -40,11 +40,13 @@ class EntityExtractor:
             entities.task_id = int(id_match.group(1))
 
         # 5. Task Title extraction
-        # e.g. "create a task called Finish Django API by tomorrow"
         title_patterns = [
             r'(?:task\s+called|task\s+named|named|called)\s+[\'"]?([a-zA-Z0-9_\-\s]+?)[\'"]?(?:\s+(?:by|due|for|at|with|on|tomorrow|today)|$)',
+            r'(?:create|add)\s+(?:a\s+)?(?:new\s+)?([a-zA-Z0-9_\-]+)\s+task\b',
             r'(?:create|add)\s+(?:a\s+)?(?:new\s+)?task\s+(?:to\s+)?([a-zA-Z0-9_\-\s]+?)(?:\s+(?:by|due|for|at|with|on|tomorrow|today)|$)',
+            r'(?:complete|finish|mark)\s+(?:my\s+|the\s+)?([a-zA-Z0-9_\-]+)\s+task\b',
             r'(?:complete|finish|mark)\s+(?:the\s+)?(?:task\s+)?([a-zA-Z0-9_\-\s]+?)(?:\s+task|\s+as\s+completed|\s+as\s+done|$)',
+            r'(?:schedule)\s+(?:my\s+)?([a-zA-Z0-9_\-]+)\s+(?:for|tomorrow|today|at|in|on)\b',
             r'(?:schedule)\s+(?:my\s+)?(?:task\s+)?([a-zA-Z0-9_\-\s]+?)(?:\s+task|\s+tomorrow|\s+today|\s+for|\s+at|$)',
         ]
         for pat in title_patterns:
@@ -53,10 +55,11 @@ class EntityExtractor:
                 extracted = m.group(1).strip()
                 # Clean filler words
                 extracted = re.sub(r'^(to\s+|my\s+|the\s+|task\s+)', '', extracted, flags=re.IGNORECASE).strip()
+                extracted = re.sub(r'\s+task$', '', extracted, flags=re.IGNORECASE).strip()
                 # Strip trailing time/date and assignment keywords
                 extracted = re.sub(r'\s+(?:and\s+)?assign(?:ed)?\s+(?:to\s+)?[\w\.-]+(?:@[\w\.-]+\.\w+)?.*$', '', extracted, flags=re.IGNORECASE).strip()
                 extracted = re.sub(r'\s+(tomorrow|today|tonight|at|by|due|for|with|on|urgent|priority.*)$', '', extracted, flags=re.IGNORECASE).strip()
-                if extracted and len(extracted) > 1:
+                if extracted and len(extracted) > 1 and extracted.lower() not in ('it', 'that', 'this'):
                     entities.task_title = extracted.title()
                     break
 
@@ -95,15 +98,32 @@ class EntityExtractor:
             if p_name:
                 entities.project_title = p_name.title()
 
-        # 9. Reminders
+        # 9. Reminders & Targets
         if "remind" in lower or "alert" in lower or "notify" in lower:
-            rem_match = re.search(r'(\d+)\s*(?:min|mins|minutes?)\s+before', lower)
-            if rem_match:
-                entities.reminder_minutes = int(rem_match.group(1))
-            elif duration:
-                entities.reminder_minutes = duration
+            # Check "in X minutes"
+            in_mins = re.search(r'\bin\s+(\d+)\s*(?:min|mins|minutes?)\b', lower)
+            if in_mins:
+                entities.reminder_minutes = int(in_mins.group(1))
             else:
-                entities.reminder_minutes = 30
+                rem_match = re.search(r'(\d+)\s*(?:min|mins|minutes?)\s+before', lower)
+                if rem_match:
+                    entities.reminder_minutes = int(rem_match.group(1))
+                elif "half an hour" in lower:
+                    entities.reminder_minutes = 30
+                elif duration:
+                    entities.reminder_minutes = duration
+                else:
+                    entities.reminder_minutes = 30
+
+            # Target of reminder: "remind me ... to <action>"
+            target_match = re.search(r'(?:to\s+)([a-zA-Z0-9_\-\s]+?)(?:\s+(?:at|on|tomorrow|today)|$)', text, re.IGNORECASE)
+            if target_match:
+                t_act = target_match.group(1).strip()
+                t_act = re.sub(r'\s+(tomorrow|today|tonight|at|on).*$', '', t_act, flags=re.IGNORECASE).strip()
+                if t_act:
+                    entities.extra['target_title'] = t_act.title()
+                    if not entities.task_title:
+                        entities.task_title = t_act.title()
 
         # 10. Format (for reports)
         if "csv" in lower:
@@ -112,5 +132,9 @@ class EntityExtractor:
             entities.format = "JSON"
         elif "email" in lower:
             entities.format = "EMAIL"
+
+        rel_offset = DateTimeNormalizer.normalize_relative_offset(text, user)
+        if rel_offset:
+            entities.extra['relative_offset'] = rel_offset.isoformat()
 
         return entities

@@ -16,8 +16,9 @@ class CommandRouter:
     # Fast Path exact/near-exact patterns
     FAST_PATH_RULES = [
         # Timer
-        (r'^(?:start|begin)\s+timer$', IntentType.TIMER_START),
-        (r'^(?:stop|end|pause)\s+timer$', IntentType.TIMER_STOP),
+        (r'^(?:start|begin)\s+(?:my\s+)?timer$', IntentType.TIMER_START),
+        (r'^(?:stop|end|pause)\s+(?:it|my\s+timer|the\s+timer|timer)$', IntentType.TIMER_STOP),
+        (r'^stop\s+it$', IntentType.TIMER_STOP),
 
         # Tasks
         (r'^(?:show|list|get|view)\s+(?:all\s+)?(?:my\s+)?tasks$', IntentType.TASK_LIST),
@@ -43,7 +44,7 @@ class CommandRouter:
         (r'^(?:productivity\s+summary|my\s+productivity|how\s+productive\s+was\s+i(?:\s+today)?)$', IntentType.PRODUCTIVITY_SUMMARY),
 
         # AI Recommendations / Planning
-        (r'^(?:recommendations?|ai\s+recommendations?|what\s+should\s+i\s+work\s+on)$', IntentType.AI_RECOMMENDATION),
+        (r'^(?:recommendations?|ai\s+recommendations?|what\s+should\s+i\s+work\s+on(?:\s+next)?|what\s+next)$', IntentType.AI_RECOMMENDATION),
         (r'^(?:plan\s+my\s+day|optimize\s+(?:my\s+)?schedule)$', IntentType.AI_SCHEDULE),
 
         # Help
@@ -54,7 +55,7 @@ class CommandRouter:
     SMART_PATTERNS = [
         # Confirmations & Cancellations (special meta-intents)
         (r'^(?:yes|confirm|proceed|do\s+it|approve|sure|ok|yep)$', 'CONFIRM'),
-        (r'^(?:no|cancel|abort|stop|reject|nevermind|nope)$', 'CANCEL'),
+        (r'^(?:no|cancel|abort|reject|nevermind|nope)$', 'CANCEL'),
         (r'^(?:the\s+)?(?:first|second|third|fourth|fifth|1st|2nd|3rd|4th|5th|one|\#\d+|\d+)\s*(?:one)?$', 'CANDIDATE_SELECT'),
 
         # Destructive Task / Schedule Operations (require high certainty)
@@ -63,7 +64,7 @@ class CommandRouter:
 
         # Task Operations
         (r'\b(?:complete|finish|mark\s+(?:as\s+)?done|mark\s+complete|done\s+with)\b', IntentType.TASK_COMPLETE),
-        (r'\b(?:create|add|new)\s+(?:a\s+)?(?:new\s+)?task\b', IntentType.TASK_CREATE),
+        (r'\b(?:create|add|new)\s+(?:a\s+)?(?:new\s+)?(?:[a-zA-Z0-9_\-]+\s+)?task\b', IntentType.TASK_CREATE),
         (r'\b(?:update|change|reschedule|edit|modify)\s+(?:the\s+)?task\b', IntentType.TASK_UPDATE),
         (r'\b(?:assign|delegate)\s+(?:the\s+)?task\b', IntentType.TASK_ASSIGN),
         (r'\b(?:find|search|lookup)\s+(?:for\s+)?(?:a\s+)?task\b', IntentType.TASK_SEARCH),
@@ -76,18 +77,21 @@ class CommandRouter:
 
         # Reminders & Alerts (including "remain me" typo handling)
         (r'\b(?:remind|reminder|alert|notify|alarm|ping)\b', IntentType.REMINDER_CREATE),
-        (r'\b\d+\s*(?:minutes?|hours?|m|h)?\s+before\b', IntentType.REMINDER_CREATE),
+        (r'\b(?:\d+|half\s+an?)\s*(?:minutes?|hours?|m|h)?\s+before\b', IntentType.REMINDER_CREATE),
         (r'\b(?:dismiss|delete|cancel|remove)\s+(?:the\s+)?reminder\b', IntentType.REMINDER_DELETE),
         (r'\b(?:show|list)\s+reminders?\b', IntentType.REMINDER_LIST),
 
         # Timer Operations
-        (r'\b(?:start|begin)\s+(?:a\s+)?timer\b', IntentType.TIMER_START),
-        (r'\b(?:stop|end|pause)\s+(?:the\s+)?timer\b', IntentType.TIMER_STOP),
+        (r'\b(?:start|begin)\s+(?:a\s+|my\s+)?timer\b', IntentType.TIMER_START),
+        (r'\b(?:stop|end|pause)\s+(?:the\s+|my\s+)?timer\b', IntentType.TIMER_STOP),
+        (r'\b(?:stop\s+it|pause\s+it|end\s+it)\b', IntentType.TIMER_STOP),
         (r'\b(?:log|record|add)\s+(?:\d+\s*(?:hours?|hrs?|mins?|minutes?))\s+(?:on|for)\b', IntentType.TIME_ENTRY_CREATE),
         (r'\b(?:time\s+history|tracked\s+time|time\s+spent|time\s+log)\b', IntentType.TIME_HISTORY),
         (r'\b(?:analyze\s+time|time\s+breakdown|time\s+analysis)\b', IntentType.TIME_ANALYSIS),
 
         # Scheduling Operations
+        (r'\b(?:move|reschedule|postpone|shift)\s+(?:it|that|this|the\s+task|the\s+meeting|the\s+event)?\s*(?:to\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|today)\b', IntentType.SCHEDULE_UPDATE),
+        (r'\b(?:make\s+it|change\s+(?:it\s+)?to|set\s+(?:it\s+)?to)\s+(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s*(?:instead)?\b', IntentType.SCHEDULE_UPDATE),
         (r'\b(?:schedule|book|block\s+time|set\s+up\s+(?:a\s+)?meeting)\b', IntentType.SCHEDULE_CREATE),
         (r'\b(?:reschedule|move|postpone)\s+(?:the\s+)?(?:meeting|event|session)\b', IntentType.SCHEDULE_UPDATE),
         (r'\b(?:check\s+conflicts?|any\s+conflicts?|am\s+i\s+free|is\s+there\s+a\s+conflict)\b', IntentType.SCHEDULE_CONFLICT_CHECK),
@@ -106,7 +110,7 @@ class CommandRouter:
         # AI Planning
         (r'\b(?:optimize|plan)\s+(?:my\s+)?(?:day|schedule)\b', IntentType.AI_SCHEDULE),
         (r'\b(?:free\s+slots?|unallocated\s+time|open\s+time)\b', IntentType.AI_TIME_ALLOCATION),
-        (r'\b(?:recommend|suggest|advice)\b', IntentType.AI_RECOMMENDATION),
+        (r'\b(?:recommend|suggest|advice|what\s+should\s+i\s+work\s+on)\b', IntentType.AI_RECOMMENDATION),
 
         # Help
         (r'\b(?:help|commands|options|what\s+can\s+you\s+do)\b', IntentType.HELP),

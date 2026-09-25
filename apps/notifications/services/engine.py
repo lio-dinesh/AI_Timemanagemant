@@ -13,7 +13,7 @@ from apps.notifications.models import (
 
 class NotificationEngine:
     @staticmethod
-    def create_notification(user, title, message, notification_type, channel=NotificationChannel.IN_APP, priority=NotificationPriority.NORMAL, task=None, schedule_event=None, dedupe_key=None, action_url=None, metadata=None):
+    def create_notification(user, title, message, notification_type, channel=NotificationChannel.IN_APP, priority=NotificationPriority.NORMAL, task=None, schedule_event=None, dedupe_key=None, action_url=None, metadata=None, scheduled_for=None):
         """
         Creates a notification with deduplication protection.
         Returns the notification if created, or None if suppressed by deduplication.
@@ -32,7 +32,7 @@ class NotificationEngine:
                 priority=priority,
                 title=title,
                 message=message,
-                scheduled_for=timezone.now(),
+                scheduled_for=scheduled_for or timezone.now(),
                 delivery_status=DeliveryStatus.PENDING,
                 recipient_email=user.email if channel == NotificationChannel.EMAIL else None,
                 recipient_name=user.get_full_name() or user.username,

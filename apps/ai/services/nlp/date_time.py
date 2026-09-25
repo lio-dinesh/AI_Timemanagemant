@@ -69,9 +69,17 @@ class DateTimeNormalizer:
         """
         lower = text.lower()
 
-        # Specific time regex: 10am, 10:30am, 2pm, 14:00
+        # Check for "X tonight" (e.g. "10 tonight")
+        tonight_match = re.search(r'\b(\d{1,2})\s+tonight\b', lower)
+        if tonight_match:
+            h = int(tonight_match.group(1))
+            if h < 12:
+                h += 12
+            return datetime.time(h, 0), "EVENING"
+
+        # Specific time regex: 10am, 10:30am, 2pm, 14:00, at 5, 6pm
         time_match = re.search(r'\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b', lower)
-        if time_match and (time_match.group(3) or ":" in time_match.group(0) or "at " in time_match.group(0)):
+        if time_match and (time_match.group(3) or ":" in time_match.group(0) or "at " in time_match.group(0) or "make it " in lower):
             h = int(time_match.group(1))
             m = int(time_match.group(2) or 0)
             meridiem = (time_match.group(3) or "").lower()
@@ -80,6 +88,9 @@ class DateTimeNormalizer:
                 h += 12
             elif meridiem == 'am' and h == 12:
                 h = 0
+            elif not meridiem and 1 <= h <= 6:
+                # "at 5" or "make it 6" in scheduling contexts defaults to PM (17:00 / 18:00)
+                h += 12
 
             if 0 <= h <= 23 and 0 <= m <= 59:
                 t = datetime.time(h, m)
@@ -93,10 +104,36 @@ class DateTimeNormalizer:
             return datetime.time(14, 0), "AFTERNOON"
         if "evening" in lower:
             return datetime.time(17, 30), "EVENING"
+        if "tonight" in lower or "night" in lower:
+            return datetime.time(20, 0), "EVENING"
         if "noon" in lower:
             return datetime.time(12, 0), "AFTERNOON"
 
         return None, None
+
+    @staticmethod
+    def normalize_relative_offset(text: str, user) -> Optional[datetime.datetime]:
+        """
+        Parses relative offsets such as 'in 30 minutes', 'in 2 hours', 'half an hour'.
+        Returns timezone-aware datetime.
+        """
+        lower = text.lower()
+        now = DateTimeNormalizer.get_user_now(user)
+
+        # "in X minutes" / "in X mins"
+        m = re.search(r'\bin\s+(\d+)\s*(?:minutes?|mins?|m)\b', lower)
+        if m:
+            return now + datetime.timedelta(minutes=int(m.group(1)))
+
+        # "in X hours" / "in X hrs"
+        h = re.search(r'\bin\s+(\d+)\s*(?:hours?|hrs?|h)\b', lower)
+        if h:
+            return now + datetime.timedelta(hours=int(h.group(1)))
+
+        if "in half an hour" in lower:
+            return now + datetime.timedelta(minutes=30)
+
+        return None
 
     @staticmethod
     def normalize_duration(text: str) -> Optional[int]:

@@ -60,13 +60,13 @@ class TaskTool:
 
         assignee_display = assigned_user.get_full_name() or assigned_user.username
         assignee_str = f" assigned to {assignee_display}" if assigned_user.id != user.id else ""
-        notif_str = f" Notification sent to {assigned_user.email}." if assigned_user.email else ""
+        notif_str = f" Notification sent to {assigned_user.email}." if assigned_user.email and assigned_user.id != user.id else ""
 
         return ExecutionResultSchema(
             success=True,
             action="TASK_CREATE",
             intent="TASK_CREATE",
-            message=f"Created task '{task.title}' with priority {task.priority}{assignee_str} (due {deadline.strftime('%b %d, %Y')}).{notif_str}",
+            message=f"Done — I've created the {task.title} task with priority {task.priority}{assignee_str} (due {deadline.strftime('%b %d, %Y at %I:%M %p')}).{notif_str}",
             data={
                 "task_id": task.id,
                 "title": task.title,
@@ -81,14 +81,14 @@ class TaskTool:
     def complete_task(user, entities: EntitySchema, resolved_task: Task = None) -> ExecutionResultSchema:
         task = resolved_task
         if not task and entities.task_id:
-            task = Task.objects.filter(id=entities.task_id).first()
+            task = Task.objects.filter(id=entities.task_id, assigned_to=user).first()
 
         if not task:
             return ExecutionResultSchema(
                 success=False,
                 action="TASK_COMPLETE",
                 intent="TASK_COMPLETE",
-                message="Could not find the specified task to complete."
+                message="I couldn't find that task. Want me to search for similar tasks?"
             )
 
         task.status = TaskStatus.COMPLETED
@@ -112,7 +112,7 @@ class TaskTool:
             success=True,
             action="TASK_COMPLETE",
             intent="TASK_COMPLETE",
-            message=f"Marked task '{task.title}' as COMPLETED. Notification dispatched.",
+            message=f"Marked task '{task.title}' as COMPLETED. Done! I've marked your task as completed.",
             data={"task_id": task.id, "title": task.title, "status": task.status},
             audit_logged=True
         )
@@ -128,7 +128,7 @@ class TaskTool:
                 success=False,
                 action="TASK_UPDATE",
                 intent="TASK_UPDATE",
-                message="Could not find the specified task to update."
+                message="I couldn't find that task. Want me to search for similar tasks?"
             )
 
         updates = []
@@ -136,9 +136,31 @@ class TaskTool:
             task.priority = entities.priority
             updates.append(f"priority to {entities.priority}")
         if entities.date:
-            d = datetime.date.fromisoformat(entities.date)
-            task.deadline = timezone.make_aware(datetime.datetime.combine(d, datetime.time(18, 0)))
-            updates.append(f"deadline to {d.strftime('%b %d')}")
+            try:
+                d = datetime.date.fromisoformat(entities.date)
+                hour = 18
+                minute = 0
+                if entities.start_time:
+                    parts = entities.start_time.split(":")
+                    hour = int(parts[0])
+                    minute = int(parts[1]) if len(parts) > 1 else 0
+                task.deadline = timezone.make_aware(datetime.datetime.combine(d, datetime.time(hour, minute)))
+                updates.append(f"deadline to {task.deadline.strftime('%A, %b %d at %I:%M %p')}")
+            except Exception:
+                pass
+        elif entities.start_time and task.deadline:
+            try:
+                parts = entities.start_time.split(":")
+                hour = int(parts[0])
+                minute = int(parts[1]) if len(parts) > 1 else 0
+                target_date = timezone.localdate(task.deadline)
+                task.deadline = timezone.make_aware(datetime.datetime.combine(target_date, datetime.time(hour, minute)))
+                updates.append(f"time to {task.deadline.strftime('%I:%M %p')}")
+            except Exception:
+                pass
+
+        if not updates:
+            updates.append("details updated")
 
         task.save(update_fields=['priority', 'deadline', 'updated_at'])
 
@@ -191,7 +213,14 @@ class TaskTool:
         now = timezone.now()
         qs = Task.objects.filter(assigned_to=user)
 
-        if entities.extra.get('overdue') or "overdue" in (entities.extra.get('raw_text') or ""):
+        if entities.date:
+            try:
+                target_d = datetime.date.fromisoformat(entities.date)
+                qs = qs.filter(deadline__date=target_d)
+                label = f"due on {target_d.strftime('%A, %b %d')}"
+            except Exception:
+                pass
+        elif entities.extra.get('overdue') or "overdue" in (entities.extra.get('raw_text') or ""):
             qs = qs.filter(deadline__lt=now, status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS])
             label = "overdue"
         elif entities.task_title:

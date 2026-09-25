@@ -57,7 +57,12 @@ class ContextManager:
         pending_action: Optional[str] = None,
         pending_entities: Optional[Dict[str, Any]] = None,
         candidate_entities: Optional[List[Dict[str, Any]]] = None,
-        confirmation_token: Optional[str] = None
+        confirmation_token: Optional[str] = None,
+        last_task_id: Optional[int] = None,
+        last_task_title: Optional[str] = None,
+        last_event_id: Optional[int] = None,
+        last_event_title: Optional[str] = None,
+        dialogue_turn: Optional[Dict[str, str]] = None
     ) -> ContextSessionSchema:
         session = cls.get_session(user_id, conversation_id)
         if last_intent is not None:
@@ -71,6 +76,19 @@ class ContextManager:
         if confirmation_token is not None:
             session.confirmation_token = confirmation_token
             session.confirmation_required = bool(confirmation_token)
+        if last_task_id is not None:
+            session.last_task_id = last_task_id
+        if last_task_title is not None:
+            session.last_task_title = last_task_title
+        if last_event_id is not None:
+            session.last_event_id = last_event_id
+        if last_event_title is not None:
+            session.last_event_title = last_event_title
+        if dialogue_turn is not None:
+            session.dialogue_history.append(dialogue_turn)
+            # Keep max last 6 turns (3 rounds)
+            if len(session.dialogue_history) > 6:
+                session.dialogue_history = session.dialogue_history[-6:]
 
         cls.save_session(session)
         return session

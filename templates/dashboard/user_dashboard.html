@@ -14,36 +14,43 @@
   </div>
   <p class="small text-white-50 mb-3">Speak or type in plain English, e.g. <em>"Schedule my database task tomorrow morning"</em>, <em>"Remind me 30 minutes before meeting"</em>, or <em>"Start timer"</em>.</p>
   
-  <form id="nlp-form" hx-post="{% url 'nlp_command_prompt' %}" hx-target="#nlp-feedback" hx-swap="innerHTML">
+  <form id="nlp-form" hx-post="{% url 'nlp_command_prompt' %}" hx-target="#nlp-feedback" hx-swap="innerHTML" hx-indicator="#nlp-processing">
     {% csrf_token %}
     <input type="hidden" name="conversation_id" id="nlp-conversation-id" value="">
     <input type="hidden" name="source" id="nlp-source" value="TEXT">
     <div class="input-group input-group-lg shadow-sm">
-      <input type="text" name="command" id="nlp-input" class="form-control nlp-command-input fs-6" placeholder="Type or click the microphone to speak a command..." autocomplete="off" style="background-color: #0f172a !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #38bdf8 !important;">
+      <input type="text" name="command" id="nlp-input" class="form-control nlp-command-input fs-6" placeholder="Ask TimeSync anything..." autocomplete="off" style="background-color: #0f172a !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #38bdf8 !important;">
       <button class="btn btn-outline-light px-3" type="button" id="btn-mic" title="Click to speak (Voice Recognition)" onclick="toggleVoiceRecognition()" style="background-color: #0f172a !important; border-color: rgba(165, 180, 252, 0.45) !important;">
         <i class="bi bi-mic-fill" id="mic-icon"></i>
       </button>
-      <button class="btn btn-light fw-bold px-4 text-primary" type="submit">
-        <i class="bi bi-send-fill me-1"></i> Run
+      <button class="btn fw-semibold px-4 text-white d-flex align-items-center gap-2" type="submit" id="nlp-submit-btn" style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); border: none; border-radius: 0 0.75rem 0.75rem 0; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4); font-size: 0.95rem;">
+        <i class="bi bi-send-fill"></i> Submit
       </button>
     </div>
   </form>
+
+  <!-- Clean Processing State Indicator -->
+  <div id="nlp-processing" class="htmx-indicator mt-2 py-1 px-3 rounded-pill bg-white bg-opacity-10 text-white-50 d-inline-flex align-items-center gap-2 small">
+    <div class="spinner-border spinner-border-sm text-info" role="status" style="width: 0.9rem; height: 0.9rem;"></div>
+    <span>Understanding and working on it...</span>
+  </div>
+
   <div class="d-flex flex-wrap gap-2 mt-2 align-items-center">
     <span class="small text-white-50 me-1" style="font-size: 0.75rem;">Suggestions:</span>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Remind me 30 minutes before meeting');">
-      🔔 Remind 30m before meeting
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Remind me tomorrow at 10 PM to submit assignment');">
+      🔔 Remind tomorrow at 10 PM
     </button>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Schedule focus session tomorrow morning');">
-      📅 Schedule focus session
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Schedule Python tomorrow morning');">
+      📅 Schedule Python tomorrow
     </button>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Start timer');">
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('How productive was I today?');">
+      📊 How productive was I today?
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('What should I work on next?');">
+      💡 What should I work on next?
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Start my timer');">
       ⏱️ Start timer
-    </button>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Productivity summary');">
-      📊 Productivity summary
-    </button>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Plan my day');">
-      🤖 Plan my day
     </button>
     <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Help');">
       ❓ Help
@@ -338,7 +345,7 @@
     btnMic.classList.add('btn-outline-light');
     micIcon.classList.remove('bi-record-circle-fill');
     micIcon.classList.add('bi-mic-fill');
-    input.placeholder = "Type or click the microphone to speak a command...";
+    input.placeholder = "Ask TimeSync anything...";
   }
 
   // Interactive Confirmation Handlers

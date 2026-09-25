@@ -50,6 +50,8 @@ class ResponseGenerator:
             return f"⚠️ **Confirmation Required**\n\n{result.preview.description}\n\n*Reply with **'yes'** or **'confirm'** to proceed, or **'no'** to cancel.*"
 
         elif mode == ResponseMode.CLARIFICATION and result.candidates:
+            if "\n1. #" in raw_msg or "\n- **" in raw_msg:
+                return raw_msg
             cands_text = "\n".join([
                 f"- **{i+1}.** {c.get('title', 'Untitled')} (ID: #{c.get('id', '-')})"
                 for i, c in enumerate(result.candidates)

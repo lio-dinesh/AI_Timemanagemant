@@ -17,23 +17,66 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }, 5000);
 
-  // Mobile Sidebar Drawer Toggle
+  // Mobile Sidebar Drawer Toggle & Backdrop
   const toggleBtn = document.getElementById('sidebarToggle');
+  const closeBtn = document.getElementById('sidebarCloseBtn');
   const sidebar = document.querySelector('.app-sidebar');
   const backdrop = document.getElementById('sidebarBackdrop');
 
-  if (toggleBtn && sidebar) {
+  function openSidebar() {
+    if (sidebar) sidebar.classList.add('show');
+    if (backdrop) backdrop.classList.add('show');
+    document.body.classList.add('sidebar-open');
+  }
+
+  function closeSidebar() {
+    if (sidebar) sidebar.classList.remove('show');
+    if (backdrop) backdrop.classList.remove('show');
+    document.body.classList.remove('sidebar-open');
+  }
+
+  if (toggleBtn) {
     toggleBtn.addEventListener('click', function(e) {
       e.stopPropagation();
-      sidebar.classList.toggle('show');
-      if (backdrop) backdrop.classList.toggle('show');
+      if (sidebar && sidebar.classList.contains('show')) {
+        closeSidebar();
+      } else {
+        openSidebar();
+      }
     });
   }
 
-  if (backdrop && sidebar) {
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      closeSidebar();
+    });
+  }
+
+  if (backdrop) {
     backdrop.addEventListener('click', function() {
-      sidebar.classList.remove('show');
-      backdrop.classList.remove('show');
+      closeSidebar();
+    });
+  }
+
+  // Notification dropdown auto-clear unread badge on interaction
+  const notifBtn = document.getElementById('notificationDropdownBtn');
+  if (notifBtn) {
+    notifBtn.addEventListener('show.bs.dropdown', function() {
+      const badges = document.querySelectorAll('#nav-notif-badge, #nav-dropdown-badge, #sidebar-notif-badge, .notif-badge-pill, .notif-dropdown-pill');
+      badges.forEach(b => {
+        b.style.display = 'none';
+        b.remove();
+      });
+
+      // Clear count on server
+      fetch('/notifications/read-all/', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken'),
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      }).catch(() => {});
     });
   }
 });

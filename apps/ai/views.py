@@ -71,29 +71,55 @@ def nlp_command_prompt(request):
     )
 
     if request.headers.get('HX-Request'):
-        alert_class = "alert-success" if result.get('success') else "alert-warning"
-        msg = result.get('message', '').replace('\n', '<br>')
-        html = f"<div class='alert {alert_class} py-2 mb-2'><strong>{result.get('intent')}:</strong> {msg}"
+        is_success = result.get('success', False)
+        requires_conf = result.get('requires_confirmation', False)
+        candidates = result.get('candidates')
 
-        if result.get('requires_confirmation') and result.get('preview'):
+        if requires_conf:
+            alert_bg = "background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #92400e;"
+            icon_cls = "bi-shield-exclamation text-warning"
+        elif not is_success:
+            alert_bg = "background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #991b1b;"
+            icon_cls = "bi-exclamation-triangle-fill text-danger"
+        elif candidates:
+            alert_bg = "background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.35); color: #3730a3;"
+            icon_cls = "bi-question-circle-fill text-primary"
+        else:
+            alert_bg = "background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); color: #065f46;"
+            icon_cls = "bi-stars text-success"
+
+        msg = result.get('message', '').replace('\n', '<br>')
+        html = f"""
+        <div class='p-3 mb-2 rounded-3 shadow-sm' style='{alert_bg} font-size: 0.93rem; line-height: 1.5;'>
+            <div class='d-flex align-items-start gap-2'>
+                <i class='bi {icon_cls} fs-5 mt-0 flex-shrink-0'></i>
+                <div class='flex-grow-1'>
+                    <div>{msg}</div>
+        """
+
+        if requires_conf and result.get('preview'):
             prev = result['preview']
             token = prev.get('confirm_token', '')
             cid = result.get('conversation_id', '')
             html += f"""
-            <div class='mt-2 pt-2 border-top'>
-                <button type='button' class='btn btn-sm btn-danger me-2' onclick="confirmNlpAction('{token}', '{cid}')">Confirm Action</button>
+            <div class='mt-2 pt-2 border-top border-warning-subtle d-flex gap-2'>
+                <button type='button' class='btn btn-sm btn-danger' onclick="confirmNlpAction('{token}', '{cid}')">Confirm Action</button>
                 <button type='button' class='btn btn-sm btn-outline-secondary' onclick="cancelNlpAction('{cid}')">Cancel</button>
             </div>
             """
 
-        if result.get('candidates'):
-            html += "<div class='mt-2 d-flex flex-wrap gap-1'>"
-            for i, cand in enumerate(result['candidates']):
+        if candidates:
+            html += "<div class='mt-2 d-flex flex-wrap gap-2'>"
+            for i, cand in enumerate(candidates):
                 c_title = cand.get('title', '')
                 html += f"<button type='button' class='btn btn-sm btn-outline-primary' onclick=\"selectNlpCandidate({i+1}, '{result.get('conversation_id', '')}')\">{i+1}. {c_title}</button>"
             html += "</div>"
 
-        html += "</div>"
+        html += """
+                </div>
+            </div>
+        </div>
+        """
         return HttpResponse(html)
 
     if result.get('success'):

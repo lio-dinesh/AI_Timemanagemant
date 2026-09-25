@@ -100,6 +100,11 @@ class ContextSessionSchema:
     candidate_entities: List[Dict[str, Any]] = field(default_factory=list)
     confirmation_required: bool = False
     confirmation_token: Optional[str] = None
+    last_task_id: Optional[int] = None
+    last_task_title: Optional[str] = None
+    last_event_id: Optional[int] = None
+    last_event_title: Optional[str] = None
+    dialogue_history: List[Dict[str, str]] = field(default_factory=list)
     created_at: Optional[str] = None
     expires_at: Optional[str] = None
 

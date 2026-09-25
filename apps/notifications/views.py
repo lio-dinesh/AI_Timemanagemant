@@ -13,9 +13,21 @@ from apps.notifications.services.brevo import BrevoEmailService
 
 logger = logging.getLogger(__name__)
 
+from django.core.cache import cache
+
 @login_required
 def notification_list(request):
     filter_status = request.GET.get('status')
+    
+    # When user visits the notification section, mark unread in-app notifications as read and clear cache
+    if filter_status != 'unread':
+        Notification.objects.filter(
+            user=request.user,
+            channel=NotificationChannel.IN_APP,
+            read_at__isnull=True
+        ).update(read_at=timezone.now(), delivery_status=DeliveryStatus.READ)
+        cache.delete(f"user_{request.user.id}_notif_ctx")
+
     notifications = Notification.objects.filter(
         user=request.user,
         channel=NotificationChannel.IN_APP
@@ -35,6 +47,7 @@ def notification_list(request):
 def mark_as_read(request, pk):
     notif = get_object_or_404(Notification, pk=pk, user=request.user)
     notif.mark_as_read()
+    cache.delete(f"user_{request.user.id}_notif_ctx")
 
     if request.headers.get('HX-Request'):
         return HttpResponse("<span class='badge bg-light text-muted'>Read</span>")
@@ -42,13 +55,17 @@ def mark_as_read(request, pk):
 
 
 @login_required
-@require_POST
 def mark_all_as_read(request):
     Notification.objects.filter(
         user=request.user,
         channel=NotificationChannel.IN_APP,
         read_at__isnull=True
     ).update(read_at=timezone.now(), delivery_status=DeliveryStatus.READ)
+
+    cache.delete(f"user_{request.user.id}_notif_ctx")
+
+    if request.headers.get('HX-Request') or request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.content_type == 'application/json':
+        return JsonResponse({'status': 'success', 'unread_count': 0})
 
     messages.success(request, "All notifications marked as read.")
     return redirect('notification_list')

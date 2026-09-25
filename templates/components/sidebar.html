@@ -1,7 +1,7 @@
 {% load static %}
 <div class="app-sidebar d-flex flex-column text-white">
   <!-- Brand Header -->
-  <div class="p-3 pb-2 flex-shrink-0">
+  <div class="p-3 pb-2 flex-shrink-0 d-flex align-items-center justify-content-between">
     <a href="{% url 'user_dashboard' %}" class="d-flex align-items-center text-white text-decoration-none px-1 brand-header-link">
       <div class="logo-breathing-wrap sidebar-logo-wrap me-2">
         <div class="logo-breathing-halo"></div>
@@ -12,8 +12,12 @@
         <span class="brand-subtitle text-uppercase text-nowrap">Time · Focus · Intelligence</span>
       </div>
     </a>
-    <hr class="border-secondary opacity-25 mt-3 mb-0">
+    <!-- Mobile Close Drawer Button -->
+    <button type="button" class="btn btn-sm btn-link text-white-50 p-1 d-lg-none" id="sidebarCloseBtn" aria-label="Close Navigation" style="font-size: 1.25rem;">
+      <i class="bi bi-x-lg"></i>
+    </button>
   </div>
+  <hr class="border-secondary opacity-25 mt-0 mb-0 mx-3">
 
   <!-- Scrollable Navigation Area -->
   <div class="sidebar-nav px-3 py-2">
@@ -62,7 +66,7 @@
         <a href="{% url 'notification_list' %}" class="nav-link {% if 'notification' in request.path %}active{% endif %}">
           <i class="bi bi-bell"></i> Notifications
           {% if unread_notifications_count > 0 %}
-            <span class="badge bg-danger rounded-pill ms-auto">{{ unread_notifications_count }}</span>
+            <span class="badge bg-danger rounded-pill ms-auto" id="sidebar-notif-badge">{{ unread_notifications_count }}</span>
           {% endif %}
         </a>
       </li>

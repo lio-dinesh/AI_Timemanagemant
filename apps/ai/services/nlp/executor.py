@@ -117,11 +117,12 @@ class NLPExecutor:
                         f"{i+1}. #{c['id']} {c['title']} (Priority {c.get('priority', '-')})"
                         for i, c in enumerate(candidates)
                     ]
+                    task_hint = f" for '{command.entities.task_title}'" if command.entities.task_title else ""
                     return ExecutionResultSchema(
                         success=True,
                         action=command.intent,
                         intent=command.intent,
-                        message=f"I found multiple matching tasks. Which one would you like?\n" + "\n".join(cand_lines),
+                        message=f"I found multiple matching tasks{task_hint}. Which one do you mean?\n" + "\n".join(cand_lines),
                         candidates=candidates
                     )
 
@@ -130,13 +131,28 @@ class NLPExecutor:
                     IntentType.TASK_DELETE.value,
                     IntentType.TASK_UPDATE.value
                 ):
-                    target_name = command.entities.task_title or (f"#{command.entities.task_id}" if command.entities.task_id else "recent")
+                    target_name = command.entities.task_title or (f"#{command.entities.task_id}" if command.entities.task_id else "that task")
                     return ExecutionResultSchema(
                         success=False,
                         action=command.intent,
                         intent=command.intent,
-                        message=f"Could not find active task '{target_name}' to {command.intent.lower().replace('_', ' ')}."
+                        message=f"I couldn't find task '{target_name}'. Want me to search for similar tasks?"
                     )
+
+        elif command.intent in (IntentType.SCHEDULE_UPDATE.value, IntentType.SCHEDULE_DELETE.value):
+            from apps.scheduling.models import ScheduleEvent
+            if command.entities.task_id:
+                resolved_entity = ScheduleEvent.objects.filter(user=user, id=command.entities.task_id).first()
+            if not resolved_entity and session and session.last_event_id:
+                resolved_entity = ScheduleEvent.objects.filter(user=user, id=session.last_event_id).first()
+            if not resolved_entity and command.entities.task_title:
+                resolved_entity = ScheduleEvent.objects.filter(user=user, title__icontains=command.entities.task_title).order_by('-start_at').first()
+            if not resolved_entity:
+                resolved_entity = ScheduleEvent.objects.filter(user=user, start_at__gte=timezone.now()).order_by('start_at').first()
+                if not resolved_entity:
+                    resolved_entity = ScheduleEvent.objects.filter(user=user).order_by('-start_at').first()
+            if not resolved_entity and session and session.last_task_id:
+                resolved_entity = Task.objects.filter(assigned_to=user, id=session.last_task_id).first()
 
         # 6. Confirmation Staging (for Destructive or Explicit Confirmation intents)
         if intent_def.requires_confirmation or command.requires_confirmation:
@@ -183,11 +199,36 @@ class NLPExecutor:
         result = ToolRegistry.execute(itype, user, command.entities, resolved_entity)
 
         # 8. Update Multi-turn Context Session
+        tid = None
+        ttitle = None
+        eid = None
+        etitle = None
+
+        if isinstance(result.data, dict):
+            tid = result.data.get('task_id')
+            ttitle = result.data.get('title') or result.data.get('task_title')
+            eid = result.data.get('event_id') or result.data.get('schedule_id')
+            etitle = result.data.get('event_title') or result.data.get('title')
+
+        if not tid and resolved_entity and hasattr(resolved_entity, 'id'):
+            tid = resolved_entity.id
+            ttitle = getattr(resolved_entity, 'title', None)
+
+        if not ttitle and command.entities.task_title:
+            ttitle = command.entities.task_title
+
+        turn = {"user": command.raw_text, "assistant": result.message} if result.message else None
+
         ContextManager.update_context(
             user_id=user_id,
             conversation_id=command.conversation_id,
             last_intent=command.intent,
-            pending_entities=command.entities.to_dict()
+            pending_entities=command.entities.to_dict(),
+            last_task_id=tid,
+            last_task_title=ttitle,
+            last_event_id=eid,
+            last_event_title=etitle,
+            dialogue_turn=turn
         )
 
         return result
@@ -235,7 +276,11 @@ class NLPExecutor:
         # Resolve entity
         resolved = None
         if target_id:
-            resolved = Task.objects.filter(id=target_id).first()
+            if intent_str.startswith('SCHEDULE'):
+                from apps.scheduling.models import ScheduleEvent
+                resolved = ScheduleEvent.objects.filter(id=target_id).first()
+            if not resolved:
+                resolved = Task.objects.filter(id=target_id).first()
 
         try:
             itype = IntentType(intent_str)
@@ -244,6 +289,16 @@ class NLPExecutor:
 
         result = ToolRegistry.execute(itype, user, entities, resolved)
         result.message = f"Confirmed: {result.message}"
+
+        # Record confirmation turn in context
+        turn = {"user": "confirm", "assistant": result.message}
+        ContextManager.update_context(
+            user_id=user_id,
+            conversation_id=command.conversation_id,
+            last_intent=intent_str,
+            dialogue_turn=turn
+        )
+
         return result
 
     @classmethod

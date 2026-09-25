@@ -76,8 +76,17 @@ class EntityResolver:
                     for t in qs[:5]
                 ]
                 return None, candidates, 0.60
+            else:
+                # Explicit title provided, but 0 matches found. Do NOT guess!
+                return None, [], 0.0
 
-        # 4. Fallback: next active/in-progress task
+        # 4. Context pronoun resolution (e.g. "move it", "complete it")
+        if session and session.last_task_id:
+            last_t = Task.objects.filter(id=session.last_task_id, assigned_to=user).first()
+            if last_t:
+                return last_t, [], 0.90
+
+        # 5. Fallback: only if user gave no title or ID at all
         active_task = Task.objects.filter(
             assigned_to=user,
             status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS]

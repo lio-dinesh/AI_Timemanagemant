@@ -79,7 +79,7 @@ class ScheduleTool:
             success=True,
             action="SCHEDULE_CREATE",
             intent="SCHEDULE_CREATE",
-            message=f"Scheduled '{title}' for {start_at.strftime('%A, %b %d at %I:%M %p')} ({duration_mins} mins).",
+            message=f"Done — I've scheduled '{title}' for {start_at.strftime('%A, %b %d at %I:%M %p')} ({duration_mins} mins).",
             data={"event_id": event.id, "title": title, "start_at": start_at.isoformat(), "end_at": end_at.isoformat()},
             audit_logged=True
         )
@@ -87,17 +87,33 @@ class ScheduleTool:
     @staticmethod
     def update_event(user, entities: EntitySchema, resolved_event: ScheduleEvent = None) -> ExecutionResultSchema:
         event = resolved_event
+        if isinstance(event, Task):
+            from apps.ai.services.tools.task_tool import TaskTool
+            return TaskTool.update_task(user, entities, resolved_task=event)
+
         if not event and entities.task_id:
             event = ScheduleEvent.objects.filter(user=user, id=entities.task_id).first()
         if not event and entities.task_title:
             event = ScheduleEvent.objects.filter(user=user, title__icontains=entities.task_title).order_by('-start_at').first()
 
         if not event:
+            # Fallback for pronoun commands like "move it to Friday" or "make it 6pm instead"
+            event = ScheduleEvent.objects.filter(user=user, start_at__gte=timezone.now()).order_by('start_at').first()
+            if not event:
+                event = ScheduleEvent.objects.filter(user=user).order_by('-start_at').first()
+
+        if not event:
+            # If no schedule event exists at all, try updating the most recently modified task
+            task = Task.objects.filter(assigned_to=user).order_by('-updated_at').first()
+            if task:
+                from apps.ai.services.tools.task_tool import TaskTool
+                return TaskTool.update_task(user, entities, resolved_task=task)
+
             return ExecutionResultSchema(
                 success=False,
                 action="SCHEDULE_UPDATE",
                 intent="SCHEDULE_UPDATE",
-                message="Could not find the scheduled event to update."
+                message="I couldn't find the scheduled event or task to update."
             )
 
         if entities.date or entities.start_time:
