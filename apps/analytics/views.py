@@ -121,3 +121,28 @@ def api_daily_productivity(request):
         'completion_rate': r.completion_rate
     } for r in records]
     return JsonResponse({'status': 'success', 'history': data})
+
+
+@login_required
+def api_dashboard_live_metrics(request):
+    """
+    Real-time live dashboard metrics endpoint for instant KPI counting updates
+    and Chart.js bar rise synchronization without full page reloads.
+    """
+    user = request.user
+    today = timezone.localdate()
+    ProductivityAggregator.aggregate_user_date(user.id, today)
+    metrics = ReportingService.get_user_dashboard_metrics(user)
+    return JsonResponse({
+        'status': 'success',
+        'today_tracked_hours': metrics['today_tracked_hours'],
+        'today_productive_hours': metrics['today_productive_hours'],
+        'today_score': round(metrics['today_score'], 1),
+        'tasks_overdue': metrics['tasks_overdue'],
+        'tasks_pending': metrics['tasks_pending'],
+        'tasks_completed': metrics['tasks_completed'],
+        'trend_labels': metrics['trend_labels'],
+        'trend_productive_hours': metrics['trend_productive_hours'],
+        'trend_tracked_hours': metrics['trend_tracked_hours'],
+        'trend_scores': metrics['trend_scores'],
+    })

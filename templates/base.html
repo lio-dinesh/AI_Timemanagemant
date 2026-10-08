@@ -24,9 +24,6 @@
 
   {% if user.is_authenticated %}
     <div class="sidebar-backdrop d-lg-none" id="sidebarBackdrop"></div>
-    <button class="sidebar-floating-toggle btn shadow-sm rounded-circle" id="sidebarFloatingToggle" title="Open Navigation Sidebar" aria-label="Open Navigation Sidebar">
-      <i class="bi bi-layout-sidebar fs-5"></i>
-    </button>
     {% include 'components/sidebar.html' %}
     <div class="main-content">
       {% include 'components/navbar.html' %}

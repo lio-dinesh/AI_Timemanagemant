@@ -21,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const toggleBtn = document.getElementById('sidebarToggle');
   const collapseBtn = document.getElementById('sidebarCollapseBtn');
   const closeBtn = document.getElementById('sidebarCloseBtn');
-  const floatingToggleBtn = document.getElementById('sidebarFloatingToggle');
   const sidebar = document.querySelector('.app-sidebar');
   const backdrop = document.getElementById('sidebarBackdrop');
 
@@ -94,18 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  if (floatingToggleBtn) {
-    floatingToggleBtn.addEventListener('click', function(e) {
-      e.stopPropagation();
-      if (isDesktop()) {
-        document.body.classList.remove('sidebar-collapsed');
-        try { localStorage.setItem('sidebar-collapsed', 'false'); } catch (err) {}
-      } else {
-        openMobileSidebar();
-      }
-    });
-  }
-
   if (backdrop) {
     backdrop.addEventListener('click', function() {
       closeMobileSidebar();
@@ -120,6 +107,12 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }
   }, { passive: true });
+
+  // Initialize KPI Number Counting Animations
+  initCountingAnimations();
+  document.body.addEventListener('htmx:afterSwap', function() {
+    initCountingAnimations();
+  });
 
   // Notification dropdown auto-clear unread badge on interaction
   const notifBtn = document.getElementById('notificationDropdownBtn');
@@ -142,6 +135,88 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// ============================================================================
+// Ultra-Smooth 120Hz KPI Number Counting Animation
+// ============================================================================
+function animateCounterElement(el, targetVal, duration = 1400) {
+  if (!el) return;
+  const rawText = el.textContent.trim();
+  const match = rawText.match(/^([^\d.-]*)([-+]?\d*\.?\d+)(.*)$/);
+  const prefix = el.getAttribute('data-prefix') || (match ? match[1] : '');
+  const suffix = el.getAttribute('data-suffix') || (match ? match[3] : '');
+
+  const fromVal = match ? parseFloat(match[2]) : 0;
+  const toVal = parseFloat(targetVal);
+  if (isNaN(toVal)) return;
+
+  const targetStr = String(targetVal);
+  const decIndex = targetStr.indexOf('.');
+  const decimals = decIndex >= 0 ? (targetStr.length - decIndex - 1) : 0;
+
+  let startTime = null;
+  el.setAttribute('data-target', toVal);
+  el.setAttribute('data-prefix', prefix);
+  el.setAttribute('data-suffix', suffix);
+  el.setAttribute('data-animated', 'true');
+
+  function step(timestamp) {
+    if (!startTime) startTime = timestamp;
+    const elapsed = timestamp - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    // Apple-grade ease-out expo curve
+    const ease = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+    const current = (fromVal + (toVal - fromVal) * ease).toFixed(decimals);
+
+    el.textContent = prefix + current + suffix;
+
+    if (progress < 1) {
+      requestAnimationFrame(step);
+    } else {
+      el.textContent = prefix + toVal.toFixed(decimals) + suffix;
+    }
+  }
+  requestAnimationFrame(step);
+}
+window.animateCounterElement = animateCounterElement;
+
+function initCountingAnimations() {
+  const elements = document.querySelectorAll('[data-counter], .kpi-value');
+  elements.forEach(el => {
+    // Avoid double-animating if already animated
+    if (el.getAttribute('data-animated') === 'true') return;
+
+    let target = el.getAttribute('data-target');
+    let prefix = el.getAttribute('data-prefix') || '';
+    let suffix = el.getAttribute('data-suffix') || '';
+
+    if (!target) {
+      const rawText = el.textContent.trim();
+      const match = rawText.match(/^([^\d.-]*)([-+]?\d*\.?\d+)(.*)$/);
+      if (match) {
+        prefix = prefix || match[1];
+        target = match[2];
+        suffix = suffix || match[3];
+      }
+    }
+    if (!target) return;
+    const toVal = parseFloat(target);
+    if (isNaN(toVal)) return;
+
+    const targetStr = String(target);
+    const decIndex = targetStr.indexOf('.');
+    const decimals = decIndex >= 0 ? (targetStr.length - decIndex - 1) : 0;
+
+    el.setAttribute('data-prefix', prefix);
+    el.setAttribute('data-suffix', suffix);
+    el.setAttribute('data-target', toVal);
+    el.setAttribute('data-animated', 'true');
+    el.textContent = prefix + (0).toFixed(decimals) + suffix;
+
+    animateCounterElement(el, toVal, 1400);
+  });
+}
+window.initCountingAnimations = initCountingAnimations;
 
 function getCookie(name) {
   let cookieValue = null;

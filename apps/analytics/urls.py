@@ -10,4 +10,5 @@ urlpatterns = [
 
     # APIs
     path('api/daily/', views.api_daily_productivity, name='api_daily_productivity'),
+    path('api/live-metrics/', views.api_dashboard_live_metrics, name='api_dashboard_live_metrics'),
 ]

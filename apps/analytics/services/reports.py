@@ -34,10 +34,11 @@ class ReportingService:
         trend_productive_hours = [round(record_map[d].productive_hours, 1) if d in record_map else 0.0 for d in past_7_days]
         trend_tracked_hours = [round(record_map[d].tracked_hours, 1) if d in record_map else 0.0 for d in past_7_days]
 
-        # Tasks overview
-        tasks_pending = Task.objects.filter(assigned_to=user, status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS]).count()
-        tasks_completed = Task.objects.filter(assigned_to=user, status=TaskStatus.COMPLETED).count()
-        tasks_overdue = Task.objects.filter(assigned_to=user, deadline__lt=timezone.now(), status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS]).count()
+        # Tasks overview: tasks assigned to or created (given) by user
+        user_tasks_qs = Task.objects.filter(Q(assigned_to=user) | Q(created_by=user)).distinct()
+        tasks_pending = user_tasks_qs.filter(status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS]).count()
+        tasks_completed = user_tasks_qs.filter(status=TaskStatus.COMPLETED).count()
+        tasks_overdue = user_tasks_qs.filter(deadline__lt=timezone.now(), status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS]).count()
 
         return {
             'today': today_record,

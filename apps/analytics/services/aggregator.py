@@ -62,31 +62,43 @@ class ProductivityAggregator:
             elif ev.event_type == ScheduleEventType.BREAK:
                 break_seconds += ev_sec
 
-        # 3. Aggregate Tasks for User
-        all_user_tasks = list(Task.objects.filter(assigned_to_id=user_id))
-        relevant_tasks = [
-            t for t in all_user_tasks
-            if (t.deadline and t.deadline.date() == target_date)
-            or (t.completed_at and t.completed_at.date() == target_date)
-            or (t.created_at and t.created_at.date() == target_date)
-            or (t.status in (TaskStatus.TODO, TaskStatus.IN_PROGRESS))
-        ]
-        if not relevant_tasks:
+        # 3. Aggregate Tasks for User based on target_date (tasks given or assigned to user)
+        all_user_tasks = list(Task.objects.filter(Q(assigned_to_id=user_id) | Q(created_by_id=user_id)).distinct())
+        today = timezone.localdate()
+        is_today = (target_date == today)
+
+        if is_today:
+            # On today: evaluate all currently active and assigned tasks for the user
             relevant_tasks = all_user_tasks
+            tasks_total = len(relevant_tasks)
+            tasks_completed = len([t for t in relevant_tasks if t.status == TaskStatus.COMPLETED])
+            tasks_overdue = len([t for t in relevant_tasks if t.deadline and t.deadline < timezone.now() and t.status in (TaskStatus.TODO, TaskStatus.IN_PROGRESS)])
 
-        tasks_total = len(relevant_tasks)
-        tasks_completed = len([t for t in relevant_tasks if t.status == TaskStatus.COMPLETED and (not t.completed_at or t.completed_at.date() <= target_date)])
-        tasks_overdue = len([t for t in relevant_tasks if t.deadline and t.deadline < day_end and t.status in (TaskStatus.TODO, TaskStatus.IN_PROGRESS)])
+            # Work completed or updated today
+            task_actual_today = sum(t.actual_seconds for t in relevant_tasks if t.updated_at and t.updated_at.date() == today)
+            task_completed_today = sum(t.estimated_seconds for t in relevant_tasks if t.completed_at and t.completed_at.date() == today)
+            today_task_work = max(task_actual_today, task_completed_today)
 
-        # Calculate productive work time from tasks if direct timer was not run
-        task_actual_sec = sum(t.actual_seconds for t in relevant_tasks)
-        task_completed_work_sec = sum(t.estimated_seconds for t in relevant_tasks if t.status == TaskStatus.COMPLETED)
-        task_progress_work_sec = sum(int(t.estimated_seconds * (t.progress / 100.0)) for t in relevant_tasks if t.status == TaskStatus.IN_PROGRESS)
-        task_work_sec = max(task_actual_sec, task_completed_work_sec + task_progress_work_sec)
+            if tracked_seconds == 0 and today_task_work > 0:
+                tracked_seconds = today_task_work
+                productive_seconds = today_task_work
+        else:
+            # On historical past days: ONLY evaluate tasks that were actually completed, had deadlines, or created on that specific target_date
+            relevant_tasks = [
+                t for t in all_user_tasks
+                if (t.completed_at and t.completed_at.date() == target_date)
+                or (t.deadline and t.deadline.date() == target_date)
+                or (t.created_at and t.created_at.date() == target_date)
+            ]
+            tasks_total = len(relevant_tasks)
+            tasks_completed = len([t for t in relevant_tasks if t.status == TaskStatus.COMPLETED and t.completed_at and t.completed_at.date() == target_date])
+            tasks_overdue = len([t for t in relevant_tasks if t.deadline and t.deadline.date() == target_date and t.deadline < day_end and t.status != TaskStatus.COMPLETED])
 
-        if tracked_seconds == 0 and task_work_sec > 0:
-            tracked_seconds = task_work_sec
-            productive_seconds = task_work_sec
+            # Historical task work credited only if tasks were completed on that date
+            task_completed_work = sum(t.estimated_seconds for t in relevant_tasks if t.status == TaskStatus.COMPLETED and t.completed_at and t.completed_at.date() == target_date)
+            if tracked_seconds == 0 and task_completed_work > 0:
+                tracked_seconds = task_completed_work
+                productive_seconds = task_completed_work
 
         # 4. Computed Scores
         if tasks_total > 0:

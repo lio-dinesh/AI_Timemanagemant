@@ -68,7 +68,7 @@
     <div class="card kpi-card shadow-sm border-0 border-start border-4 border-primary">
       <div>
         <div class="kpi-label">Today's Tracked</div>
-        <div class="kpi-value text-primary">{{ metrics.today_tracked_hours }}h</div>
+        <div id="kpi-tracked" class="kpi-value text-primary" data-counter data-target="{{ metrics.today_tracked_hours }}" data-suffix="h">{{ metrics.today_tracked_hours }}h</div>
       </div>
       <i class="bi bi-stopwatch fs-1 text-primary opacity-25"></i>
     </div>
@@ -77,7 +77,7 @@
     <div class="card kpi-card shadow-sm border-0 border-start border-4 border-success">
       <div>
         <div class="kpi-label">Productive Time</div>
-        <div class="kpi-value text-success">{{ metrics.today_productive_hours }}h</div>
+        <div id="kpi-productive" class="kpi-value text-success" data-counter data-target="{{ metrics.today_productive_hours }}" data-suffix="h">{{ metrics.today_productive_hours }}h</div>
       </div>
       <i class="bi bi-lightning-charge-fill fs-1 text-success opacity-25"></i>
     </div>
@@ -86,7 +86,7 @@
     <div class="card kpi-card shadow-sm border-0 border-start border-4 border-info">
       <div>
         <div class="kpi-label">Productivity Score</div>
-        <div class="kpi-value text-info">{{ metrics.today_score|floatformat:1 }}%</div>
+        <div id="kpi-score" class="kpi-value text-info" data-counter data-target="{{ metrics.today_score|floatformat:1 }}" data-suffix="%">{{ metrics.today_score|floatformat:1 }}%</div>
       </div>
       <i class="bi bi-graph-up-arrow fs-1 text-info opacity-25"></i>
     </div>
@@ -95,7 +95,7 @@
     <div class="card kpi-card shadow-sm border-0 border-start border-4 {% if metrics.tasks_overdue > 0 %}border-danger{% else %}border-secondary{% endif %}">
       <div>
         <div class="kpi-label">Tasks Overdue</div>
-        <div class="kpi-value {% if metrics.tasks_overdue > 0 %}text-danger{% else %}text-muted{% endif %}">
+        <div id="kpi-overdue" class="kpi-value {% if metrics.tasks_overdue > 0 %}text-danger{% else %}text-muted{% endif %}" data-counter data-target="{{ metrics.tasks_overdue }}">
           {{ metrics.tasks_overdue }}
         </div>
       </div>
@@ -109,11 +109,21 @@
   <div class="col-lg-8">
     <div class="card shadow-sm h-100">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span>7-Day Productivity & Focus Trend</span>
-        <a href="{% url 'reports' %}" class="btn btn-sm btn-link text-decoration-none">Full Report</a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="fw-semibold">7-Day Productivity & Focus Trend</span>
+          <span class="badge rounded-pill text-primary border border-primary border-opacity-25 small fw-medium" style="font-size: 0.72rem; background-color: #f0f9ff;">
+            <i class="bi bi-broadcast me-1 text-success animate-pulse"></i>Real-time
+          </span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-sm btn-light border text-secondary py-0 px-2 shadow-none" id="btn-refresh-metrics" title="Refresh live analytics" onclick="pollLiveDashboardMetrics(true)">
+            <i class="bi bi-arrow-clockwise" id="refresh-chart-icon"></i>
+          </button>
+          <a href="{% url 'reports' %}" class="btn btn-sm btn-link text-decoration-none">Full Report</a>
+        </div>
       </div>
-      <div class="card-body">
-        <canvas id="productivityChart" height="130"></canvas>
+      <div class="card-body" style="min-height: 280px; position: relative;">
+        <canvas id="productivityChart"></canvas>
       </div>
     </div>
   </div>
@@ -207,9 +217,26 @@
 
 {% block extra_js %}
 <script>
-  const ctx = document.getElementById('productivityChart');
-  if (ctx) {
-    new Chart(ctx, {
+  const chartCanvas = document.getElementById('productivityChart');
+  let productivityChartInstance = null;
+
+  if (chartCanvas) {
+    const chartCtx = chartCanvas.getContext('2d');
+
+    // Premium Linear Canvas Gradients
+    const productiveGrad = chartCtx.createLinearGradient(0, 0, 0, 260);
+    productiveGrad.addColorStop(0, '#0284c7');
+    productiveGrad.addColorStop(1, '#38bdf8');
+
+    const trackedGrad = chartCtx.createLinearGradient(0, 0, 0, 260);
+    trackedGrad.addColorStop(0, '#94a3b8');
+    trackedGrad.addColorStop(1, '#cbd5e1');
+
+    const scoreFillGrad = chartCtx.createLinearGradient(0, 0, 0, 260);
+    scoreFillGrad.addColorStop(0, 'rgba(16, 185, 129, 0.22)');
+    scoreFillGrad.addColorStop(1, 'rgba(16, 185, 129, 0.00)');
+
+    productivityChartInstance = new Chart(chartCtx, {
       type: 'bar',
       data: {
         labels: {{ metrics.trend_labels|safe }},
@@ -217,46 +244,185 @@
           {
             label: 'Productive Hours',
             data: {{ metrics.trend_productive_hours|safe }},
-            backgroundColor: '#4f46e5',
-            borderRadius: 6,
+            backgroundColor: productiveGrad,
+            borderColor: '#0284c7',
+            borderWidth: 1,
+            borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+            borderSkipped: 'bottom',
             yAxisID: 'y',
+            maxBarThickness: 38,
           },
           {
             label: 'Tracked Hours',
             data: {{ metrics.trend_tracked_hours|safe }},
-            backgroundColor: '#cbd5e1',
-            borderRadius: 6,
+            backgroundColor: trackedGrad,
+            borderColor: '#94a3b8',
+            borderWidth: 1,
+            borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+            borderSkipped: 'bottom',
             yAxisID: 'y',
+            maxBarThickness: 38,
           },
           {
             type: 'line',
             label: 'Productivity Score (%)',
             data: {{ metrics.trend_scores|safe }},
             borderColor: '#10b981',
-            borderWidth: 2,
+            backgroundColor: scoreFillGrad,
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.35,
             pointBackgroundColor: '#10b981',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 7,
             yAxisID: 'y1',
           }
         ]
       },
       options: {
         responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        animation: {
+          duration: 1300,
+          easing: 'easeOutQuart',
+        },
+        animations: {
+          y: {
+            type: 'number',
+            easing: 'easeOutQuart',
+            duration: 1400,
+            from: (ctx) => {
+              if (ctx.type === 'data' && ctx.mode === 'default' && !ctx.dropped) {
+                ctx.dropped = true;
+                return ctx.chart.scales.y.getPixelForValue(0);
+              }
+            },
+            delay: (ctx) => {
+              if (ctx.type === 'data' && ctx.mode === 'default') {
+                return ctx.dataIndex * 90 + ctx.datasetIndex * 130;
+              }
+              return 0;
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              usePointStyle: true,
+              boxWidth: 8,
+              padding: 16,
+              font: { family: 'inherit', size: 12, weight: '500' }
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            padding: 12,
+            cornerRadius: 8,
+            titleFont: { size: 13, weight: '600' },
+            bodyFont: { size: 12 },
+            boxPadding: 4,
+            usePointStyle: true
+          }
+        },
         scales: {
+          x: {
+            grid: { display: false },
+            ticks: { font: { size: 11 } }
+          },
           y: {
             beginAtZero: true,
-            title: { display: true, text: 'Hours' }
+            title: { display: true, text: 'Hours', font: { size: 11, weight: '500' } },
+            grid: { color: 'rgba(226, 232, 240, 0.6)' },
+            ticks: { precision: 1 }
           },
           y1: {
             position: 'right',
             beginAtZero: true,
             max: 100,
             grid: { drawOnChartArea: false },
-            title: { display: true, text: 'Score (%)' }
+            title: { display: true, text: 'Score (%)', font: { size: 11, weight: '500' } },
+            ticks: { callback: (val) => val + '%' }
           }
         }
       }
     });
   }
+
+  // --- Real-time Day-by-Day Live Sync Poller ---
+  function pollLiveDashboardMetrics(isManual = false) {
+    const icon = document.getElementById('refresh-chart-icon');
+    if (icon && isManual) icon.classList.add('animate-spin');
+
+    fetch('/analytics/api/live-metrics/')
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === 'success') {
+          const elTracked = document.getElementById('kpi-tracked');
+          const elProductive = document.getElementById('kpi-productive');
+          const elScore = document.getElementById('kpi-score');
+          const elOverdue = document.getElementById('kpi-overdue');
+
+          if (elTracked && window.animateCounterElement) {
+            window.animateCounterElement(elTracked, data.today_tracked_hours);
+          }
+          if (elProductive && window.animateCounterElement) {
+            window.animateCounterElement(elProductive, data.today_productive_hours);
+          }
+          if (elScore && window.animateCounterElement) {
+            window.animateCounterElement(elScore, data.today_score);
+          }
+          if (elOverdue && window.animateCounterElement) {
+            window.animateCounterElement(elOverdue, data.tasks_overdue);
+            if (data.tasks_overdue > 0) {
+              elOverdue.classList.remove('text-muted');
+              elOverdue.classList.add('text-danger');
+            } else {
+              elOverdue.classList.remove('text-danger');
+              elOverdue.classList.add('text-muted');
+            }
+          }
+
+          if (productivityChartInstance) {
+            productivityChartInstance.data.labels = data.trend_labels;
+            productivityChartInstance.data.datasets[0].data = data.trend_productive_hours;
+            productivityChartInstance.data.datasets[1].data = data.trend_tracked_hours;
+            productivityChartInstance.data.datasets[2].data = data.trend_scores;
+            productivityChartInstance.update('active');
+          }
+        }
+      })
+      .catch(err => console.debug('Live sync poll error:', err))
+      .finally(() => {
+        if (icon && isManual) {
+          setTimeout(() => icon.classList.remove('animate-spin'), 600);
+        }
+      });
+  }
+  window.pollLiveDashboardMetrics = pollLiveDashboardMetrics;
+
+  // Poll real-time metrics every 25 seconds when visible
+  setInterval(() => {
+    if (!document.hidden) {
+      pollLiveDashboardMetrics();
+    }
+  }, 25000);
+
+  // Sync immediately when tab regains focus
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) pollLiveDashboardMetrics();
+  });
+
+  // Sync immediately after HTMX swaps
+  document.body.addEventListener('htmx:afterSwap', function() {
+    pollLiveDashboardMetrics();
+  });
 
   // --- NLP Multi-Turn & Voice Interactive System ---
   let nlpConversationId = localStorage.getItem('ai_timesync_nlp_cid') || (function() {
