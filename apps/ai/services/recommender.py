@@ -12,11 +12,56 @@ class RecommenderService:
     def generate_recommendations(cls, user):
         """
         Creates actionable suggestions based on pending workload and schedule habits.
-        Includes model versioning and cold-start support.
+        Includes model versioning, cold-start support, and Google Gemini 3.6 Flash deep synthesis.
         """
         now = timezone.now()
         recommendations = []
         is_cold = FeatureBuilder.is_cold_start(user)
+
+        # Check if Gemini is available for real-time generative recommendations
+        from apps.ai.services.llm_provider import get_llm_provider, GeminiLLMProvider
+        provider = get_llm_provider()
+
+        user_tasks = list(Task.objects.filter(assigned_to=user).order_by('-priority', 'deadline')[:6])
+        if isinstance(provider, GeminiLLMProvider) and user_tasks:
+            try:
+                task_lines = [
+                    f"- '{t.title}' [Status: {t.status}, Priority: P{t.priority}, Est: {round(t.estimated_seconds/3600, 1)}h]"
+                    for t in user_tasks
+                ]
+                prompt = (
+                    f"User has the following current tasks:\n" + "\n".join(task_lines) + "\n\n"
+                    "Generate a single, executive-grade, highly actionable strategic recommendation for today's focus.\n"
+                    "Respond with a valid JSON object with exactly two string fields:\n"
+                    "\"title\": (punchy title under 8 words),\n"
+                    "\"action_suggestion\": (actionable recommendation in 1-2 sentences with concrete guidance)\n"
+                )
+                raw_json = provider.complete(
+                    prompt,
+                    system="You are an elite productivity strategist powered by Google Gemini 3.6 Flash. Return valid JSON only."
+                )
+                import json
+                parsed = json.loads(raw_json)
+                if parsed.get("title") and parsed.get("action_suggestion"):
+                    payload = {
+                        "model_version": "gemini-3.6-flash",
+                        "is_cold_start": is_cold,
+                        "type": "GEMINI_STRATEGIC_RECOMMENDATION",
+                        "title": parsed["title"],
+                        "action_suggestion": parsed["action_suggestion"]
+                    }
+                    ins = AIInsight.objects.create(
+                        user=user,
+                        insight_type=InsightType.PERSONALIZED_RECOMMENDATION,
+                        status=InsightStatus.ACTIVE,
+                        confidence=0.96,
+                        model_name="Google_Gemini_3.6_Flash",
+                        payload=payload
+                    )
+                    recommendations.append(ins)
+                    return recommendations
+            except Exception:
+                pass
 
         # Check for overdue or imminent deadlines
         overdue_count = Task.objects.filter(

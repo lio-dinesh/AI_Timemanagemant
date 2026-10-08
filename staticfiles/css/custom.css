@@ -72,14 +72,24 @@ h6 {
 }
 
 /* ==========================================================================
-   2. Glass Sidebar & Layout Structure
+   2. Glass Sidebar & Layout Structure (120Hz Fluid Motion & Collapsible)
    ========================================================================== */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
 .main-content {
   margin-left: var(--sidebar-width);
   padding: 1.75rem 2.25rem;
   min-height: 100vh;
   background-color: var(--bg-surface);
-  transition: margin-left 0.2s ease;
+  will-change: margin-left;
+  transition: margin-left 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  transform: translateZ(0);
 }
 
 .app-sidebar {
@@ -97,8 +107,83 @@ h6 {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+  transform: translateZ(0);
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
   color: #0f172a;
+}
+
+/* Desktop Collapsed Sidebar State */
+body.sidebar-collapsed .app-sidebar {
+  transform: translateX(-100%) !important;
+}
+
+body.sidebar-collapsed .main-content {
+  margin-left: 0 !important;
+}
+
+/* Floating Sidebar Toggle Button */
+.sidebar-floating-toggle {
+  position: fixed;
+  left: 1.25rem;
+  top: 1.15rem;
+  z-index: 1030;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.8) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(2, 132, 199, 0.35) !important;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.85) translateZ(0);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.sidebar-floating-toggle:hover {
+  transform: scale(1.08) translateZ(0);
+  box-shadow: 0 12px 28px rgba(2, 132, 199, 0.45) !important;
+  color: #ffffff !important;
+}
+
+body.sidebar-collapsed .sidebar-floating-toggle {
+  display: flex !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: scale(1) translateZ(0);
+}
+
+.sidebar-collapse-btn {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  color: #0284c7 !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.sidebar-collapse-btn:hover {
+  background: #ffffff !important;
+  color: #0369a1 !important;
+  transform: scale(1.08);
+  box-shadow: 0 3px 10px rgba(14, 165, 233, 0.2) !important;
+}
+
+.sidebar-nav-toggle-btn {
+  background: #ffffff !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  color: #0284c7 !important;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.sidebar-nav-toggle-btn:hover {
+  background: #f0f9ff !important;
+  border-color: #0284c7 !important;
+  color: #0369a1 !important;
+  transform: translateY(-1px);
 }
 
 .sidebar-backdrop {

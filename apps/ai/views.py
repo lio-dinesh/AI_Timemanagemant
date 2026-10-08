@@ -90,9 +90,17 @@ def nlp_command_prompt(request):
 
         import re
         msg = result.get('message', '')
+        # Convert markdown headers if present
+        msg = re.sub(r'^###\s+(.*)$', r'<h6 class="fw-bold mt-2 mb-1">\1</h6>', msg, flags=re.MULTILINE)
+        msg = re.sub(r'^##\s+(.*)$', r'<h5 class="fw-bold mt-2 mb-1">\1</h5>', msg, flags=re.MULTILINE)
+        # Convert bullets
+        msg = re.sub(r'^\s*[\*\-]\s+(.*)$', r'• \1', msg, flags=re.MULTILINE)
+        # Convert bold and italic
         msg = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', msg)
         msg = re.sub(r'\*(.*?)\*', r'<em>\1</em>', msg)
         msg = msg.replace('\n', '<br>')
+        # Collapse excessive linebreaks
+        msg = re.sub(r'(<br>\s*){3,}', '<br><br>', msg)
         html = f"""
         <div class='p-3 mb-2 rounded-3 shadow-sm' style='{alert_bg} font-size: 0.93rem; line-height: 1.55;'>
             <div class='d-flex align-items-start gap-2'>

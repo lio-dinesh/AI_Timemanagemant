@@ -298,23 +298,67 @@ class TaskTool:
         active_tasks.sort(key=lambda x: (-x.priority, x.deadline or now))
         top_task = active_tasks[0] if active_tasks else None
 
-        # Build clean formatted message
-        parts = []
-        parts.append(f"📊 **Workload & Task Analysis ({total} Total Tasks)**:")
-        parts.append(f"• Completed: **{completed_count}** ({completion_rate}%) | In Progress: **{in_progress_count}** | To Do: **{todo_count}**")
-        parts.append(f"• Estimated Workload: **{est_hours}h** | Logged Time: **{actual_hours}h** | Health Score: **{task_score}%**")
+        # Smart AI Strategic Breakdown via Google Gemini 3.6 Flash
+        from apps.ai.services.llm_provider import get_llm_provider, GeminiLLMProvider
+        provider = get_llm_provider()
+        gemini_strategic_summary = None
 
-        if overdue_count > 0:
-            top_overdue = sorted(overdue, key=lambda x: -x.priority)[0]
-            parts.append(f"• ⚠️ **{overdue_count} Overdue Task(s)**! Urgent: *'{top_overdue.title}'* (Priority {top_overdue.priority}).")
+        if isinstance(provider, GeminiLLMProvider) and total > 0:
+            try:
+                task_summaries = []
+                for t in tasks[:15]:
+                    d_str = t.deadline.strftime('%b %d') if t.deadline else 'no deadline'
+                    is_ov = "⚠️ OVERDUE" if (t.deadline and t.deadline < now and t.status != TaskStatus.COMPLETED) else ""
+                    task_summaries.append(
+                        f"- '{t.title}' [Status: {t.status}, Priority: P{t.priority}, Due: {d_str}, Est: {round(t.estimated_seconds/3600, 1)}h, Logged: {round(t.actual_seconds/3600, 1)}h {is_ov}]"
+                    )
 
-        if top_task:
-            due_str = f", due {top_task.deadline.strftime('%b %d')}" if top_task.deadline else ""
-            parts.append(f"• 🎯 **Recommended Next Action**: Focus on *'{top_task.title}'* (Priority {top_task.priority}{due_str}).")
-        elif completed_count == total:
-            parts.append("• 🎉 **Outstanding!** All your tasks are completed. Ready for a well-deserved break or next sprint.")
+                tasks_context = "\n".join(task_summaries)
+                prompt = (
+                    f"User has {total} tasks ({completed_count} completed, {in_progress_count} in-progress, {todo_count} to-do, {overdue_count} overdue).\n"
+                    f"Total estimated workload: {est_hours}h. Total logged time: {actual_hours}h. Current task health score: {task_score}%.\n\n"
+                    f"Task list:\n{tasks_context}\n\n"
+                    "Provide an executive, high-impact AI productivity breakdown in 3 to 4 concise bullet points:\n"
+                    "1. Executive Assessment (efficiency & workload balance)\n"
+                    "2. Critical Risks or Bottlenecks (flag overdue or high-priority items)\n"
+                    "3. Immediate Next Action (exact task to execute right now and why)\n"
+                    "4. Smart Time-Saving Advice (concrete tactical optimization technique)\n"
+                    "Format with bold keywords and bullet points. Be concise, actionable, and inspiring."
+                )
+                system_prompt = "You are an elite AI Executive Productivity Coach powered by Google Gemini 3.6 Flash."
+                raw_gemini_resp = provider.complete(prompt, system=system_prompt)
+                if raw_gemini_resp and len(raw_gemini_resp.strip()) > 40:
+                    gemini_strategic_summary = raw_gemini_resp.strip()
+            except Exception as e:
+                logger.warning("Gemini task analysis exception: %s", e)
 
-        msg = "\n".join(parts)
+        if gemini_strategic_summary:
+            parts = []
+            parts.append(f"✨ **Google Gemini 3.6 Flash — Intelligent Task & Workload Analysis**")
+            parts.append(f"📊 **Metrics**: **{completed_count}/{total}** Completed ({completion_rate}%) | Workload: **{est_hours}h** | Logged: **{actual_hours}h** | Health Score: **{task_score}%**")
+            if overdue_count > 0:
+                parts.append(f"⚠️ **Attention**: {overdue_count} task(s) currently overdue!")
+            parts.append("")
+            parts.append(gemini_strategic_summary)
+            msg = "\n".join(parts)
+        else:
+            # Fallback to rich deterministic formatting
+            parts = []
+            parts.append(f"📊 **Workload & Task Analysis ({total} Total Tasks)**:")
+            parts.append(f"• Completed: **{completed_count}** ({completion_rate}%) | In Progress: **{in_progress_count}** | To Do: **{todo_count}**")
+            parts.append(f"• Estimated Workload: **{est_hours}h** | Logged Time: **{actual_hours}h** | Health Score: **{task_score}%**")
+
+            if overdue_count > 0:
+                top_overdue = sorted(overdue, key=lambda x: -x.priority)[0]
+                parts.append(f"• ⚠️ **{overdue_count} Overdue Task(s)**! Urgent: *'{top_overdue.title}'* (Priority {top_overdue.priority}).")
+
+            if top_task:
+                due_str = f", due {top_task.deadline.strftime('%b %d')}" if top_task.deadline else ""
+                parts.append(f"• 🎯 **Recommended Next Action**: Focus on *'{top_task.title}'* (Priority {top_task.priority}{due_str}).")
+            elif completed_count == total:
+                parts.append("• 🎉 **Outstanding!** All your tasks are completed. Ready for a well-deserved break or next sprint.")
+
+            msg = "\n".join(parts)
 
         return ExecutionResultSchema(
             success=True,

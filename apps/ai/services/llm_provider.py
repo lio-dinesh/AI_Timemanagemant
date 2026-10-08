@@ -82,7 +82,7 @@ class GeminiLLMProvider(BaseLLMProvider):
         }
 
         import time
-        max_attempts = 2
+        max_attempts = 3
         for attempt in range(max_attempts):
             try:
                 response = requests.post(url, json=payload, headers=headers, timeout=18)
@@ -102,13 +102,13 @@ class GeminiLLMProvider(BaseLLMProvider):
                                 return brace_match.group(1).strip()
                             return text_response
                 elif response.status_code in (429, 503) and attempt < max_attempts - 1:
-                    time.sleep(1.5)
+                    time.sleep(1.2 * (attempt + 1))
                     continue
 
                 logger.warning("Gemini API call failed (%s): %s. Falling back to Mock.", response.status_code, response.text[:200])
             except Exception as exc:
                 if attempt < max_attempts - 1:
-                    time.sleep(1.5)
+                    time.sleep(1.2 * (attempt + 1))
                     continue
                 logger.warning("Gemini API exception (%s). Falling back to Mock.", exc)
 
