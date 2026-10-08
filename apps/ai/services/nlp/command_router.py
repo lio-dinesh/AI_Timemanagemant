@@ -43,6 +43,10 @@ class CommandRouter:
         # Productivity Summary
         (r'^(?:productivity\s+summary|my\s+productivity|how\s+productive\s+was\s+i(?:\s+today)?)$', IntentType.PRODUCTIVITY_SUMMARY),
 
+        # Task Analysis & Audit
+        (r'^(?:analyze|analize)(?:\s+(?:my\s+)?tasks?|\s+workload|\s+schedule|\s+(?:my\s+)?productivity)?$', IntentType.TASK_ANALYZE),
+        (r'^(?:task\s+analysis|tasks\s+analysis|analyze\s+my\s+work|workload\s+analysis)$', IntentType.TASK_ANALYZE),
+
         # AI Recommendations / Planning
         (r'^(?:recommendations?|ai\s+recommendations?|what\s+should\s+i\s+work\s+on(?:\s+next)?|what\s+next)$', IntentType.AI_RECOMMENDATION),
         (r'^(?:plan\s+my\s+day|optimize\s+(?:my\s+)?schedule)$', IntentType.AI_SCHEDULE),
@@ -102,6 +106,11 @@ class CommandRouter:
         (r'\b(?:productivity\s+pattern|peak\s+hours|best\s+time\s+to\s+work|focus\s+pattern)\b', IntentType.PRODUCTIVITY_PATTERN),
         (r'\b(?:productivity|productive|score)\b', IntentType.PRODUCTIVITY_SUMMARY),
         (r'\b(?:anomal(?:y|ies)|unusual|burnout|fatigue|odd\s+session)\b', IntentType.ANOMALY_ANALYSIS),
+
+        # Task Analysis & Audit
+        (r'\b(?:analyze|analize|breakdown|audit|evaluation)\s+(?:my\s+)?tasks?\b', IntentType.TASK_ANALYZE),
+        (r'\b(?:task\s+analysis|tasks\s+analysis|workload\s+analysis)\b', IntentType.TASK_ANALYZE),
+        (r'\b(?:analyze|analize)\b', IntentType.TASK_ANALYZE),
 
         # Reports
         (r'\b(?:send|email|generate|dispatch)\s+(?:my\s+)?(?:productivity\s+)?report\b', IntentType.REPORT_GENERATE),

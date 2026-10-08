@@ -57,6 +57,8 @@ class TaskTool:
 
         # Dispatch In-App & Email notification to assignee
         NotificationEngine.notify_task_assigned(task, assigned_by=user)
+        from apps.analytics.services.aggregator import ProductivityAggregator
+        ProductivityAggregator.aggregate_user_date(task.assigned_to_id, timezone.localdate())
 
         assignee_display = assigned_user.get_full_name() or assigned_user.username
         assignee_str = f" assigned to {assignee_display}" if assigned_user.id != user.id else ""
@@ -107,6 +109,8 @@ class TaskTool:
 
         # Dispatch In-App & Email notification to creator/assignee
         NotificationEngine.notify_task_completed(task, completed_by=user)
+        from apps.analytics.services.aggregator import ProductivityAggregator
+        ProductivityAggregator.aggregate_user_date(task.assigned_to_id, timezone.localdate())
 
         return ExecutionResultSchema(
             success=True,
@@ -247,6 +251,88 @@ class TaskTool:
             intent="TASK_SEARCH",
             message=f"Found {len(tasks)} {label} task(s): {'; '.join(items)}.",
             data={"tasks": [{"id": t.id, "title": t.title, "priority": t.priority} for t in tasks]}
+        )
+
+    @staticmethod
+    def analyze_tasks(user, entities: EntitySchema) -> ExecutionResultSchema:
+        from apps.tasks.services.task import TaskService
+        tasks = list(TaskService.get_user_tasks(user))
+        total = len(tasks)
+
+        if total == 0:
+            return ExecutionResultSchema(
+                success=True,
+                action="TASK_ANALYZE",
+                intent="TASK_ANALYZE",
+                message="You don't have any tasks assigned yet. Add a task with 'Create task [title]' to start organizing your workload!",
+                data={"total": 0}
+            )
+
+        now = timezone.now()
+        completed = [t for t in tasks if t.status == TaskStatus.COMPLETED]
+        in_progress = [t for t in tasks if t.status == TaskStatus.IN_PROGRESS]
+        todo = [t for t in tasks if t.status == TaskStatus.TODO]
+        blocked = [t for t in tasks if t.status == TaskStatus.BLOCKED]
+        overdue = [t for t in tasks if t.deadline and t.deadline < now and t.status in (TaskStatus.TODO, TaskStatus.IN_PROGRESS)]
+
+        completed_count = len(completed)
+        in_progress_count = len(in_progress)
+        todo_count = len(todo)
+        overdue_count = len(overdue)
+
+        # Workload hours
+        est_hours = round(sum(t.estimated_seconds for t in tasks) / 3600, 1)
+        completed_hours = round(sum(t.estimated_seconds for t in completed) / 3600, 1)
+        actual_hours = round(sum(t.actual_seconds for t in tasks) / 3600, 1)
+
+        # Completion rate & performance score
+        completion_rate = round((completed_count / total) * 100, 1)
+        avg_progress = round(sum(t.progress for t in tasks) / total, 1) if total > 0 else 0.0
+
+        # Calculate a realistic productivity / task health score
+        on_time_bonus = max(0, 15 - (overdue_count * 2))
+        task_score = min(100.0, round((completion_rate * 0.60) + (avg_progress * 0.25) + on_time_bonus, 1))
+
+        # Top priority active tasks
+        active_tasks = [t for t in tasks if t.status in (TaskStatus.TODO, TaskStatus.IN_PROGRESS)]
+        active_tasks.sort(key=lambda x: (-x.priority, x.deadline or now))
+        top_task = active_tasks[0] if active_tasks else None
+
+        # Build clean formatted message
+        parts = []
+        parts.append(f"📊 **Workload & Task Analysis ({total} Total Tasks)**:")
+        parts.append(f"• Completed: **{completed_count}** ({completion_rate}%) | In Progress: **{in_progress_count}** | To Do: **{todo_count}**")
+        parts.append(f"• Estimated Workload: **{est_hours}h** | Logged Time: **{actual_hours}h** | Health Score: **{task_score}%**")
+
+        if overdue_count > 0:
+            top_overdue = sorted(overdue, key=lambda x: -x.priority)[0]
+            parts.append(f"• ⚠️ **{overdue_count} Overdue Task(s)**! Urgent: *'{top_overdue.title}'* (Priority {top_overdue.priority}).")
+
+        if top_task:
+            due_str = f", due {top_task.deadline.strftime('%b %d')}" if top_task.deadline else ""
+            parts.append(f"• 🎯 **Recommended Next Action**: Focus on *'{top_task.title}'* (Priority {top_task.priority}{due_str}).")
+        elif completed_count == total:
+            parts.append("• 🎉 **Outstanding!** All your tasks are completed. Ready for a well-deserved break or next sprint.")
+
+        msg = "\n".join(parts)
+
+        return ExecutionResultSchema(
+            success=True,
+            action="TASK_ANALYZE",
+            intent="TASK_ANALYZE",
+            message=msg,
+            data={
+                "total": total,
+                "completed": completed_count,
+                "in_progress": in_progress_count,
+                "todo": todo_count,
+                "overdue": overdue_count,
+                "completion_rate": completion_rate,
+                "task_score": task_score,
+                "estimated_hours": est_hours,
+                "logged_hours": actual_hours,
+                "top_task_id": top_task.id if top_task else None
+            }
         )
 
     @staticmethod

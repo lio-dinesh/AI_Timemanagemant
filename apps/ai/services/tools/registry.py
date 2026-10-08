@@ -32,6 +32,7 @@ class ToolRegistry:
         IntentType.TASK_SEARCH: TaskTool.search_tasks,
         IntentType.TASK_LIST: TaskTool.list_tasks,
         IntentType.TASK_ASSIGN: TaskTool.assign_task,
+        IntentType.TASK_ANALYZE: TaskTool.analyze_tasks,
 
         # Projects
         IntentType.PROJECT_CREATE: ProjectTool.create_project,

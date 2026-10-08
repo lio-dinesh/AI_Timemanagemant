@@ -70,6 +70,8 @@ def task_create(request):
             if not task.estimated_seconds:
                 task.estimated_seconds = 3600
             task.save()
+            from apps.analytics.services.aggregator import ProductivityAggregator
+            ProductivityAggregator.aggregate_user_date(task.assigned_to_id, timezone.localdate())
             AuditService.log('TASK_CREATED', request.user, 'Task', task.id, request, 'SUCCESS', metadata={'title': task.title, 'priority': task.priority})
             NotificationEngine.notify_task_assigned(task, assigned_by=request.user)
             messages.success(request, f"Task '{task.title}' created successfully.")
@@ -108,6 +110,8 @@ def task_toggle_status(request, pk):
         elif new_status == TaskStatus.IN_PROGRESS and not task.started_at:
             task.started_at = timezone.now()
         task.save(update_fields=['status', 'progress', 'completed_at', 'started_at', 'updated_at'])
+        from apps.analytics.services.aggregator import ProductivityAggregator
+        ProductivityAggregator.aggregate_user_date(task.assigned_to_id, timezone.localdate())
         AuditService.log('TASK_UPDATED', request.user, 'Task', task.id, request, 'SUCCESS', metadata={'new_status': new_status})
 
     if request.headers.get('HX-Request'):

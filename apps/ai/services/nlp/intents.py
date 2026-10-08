@@ -20,6 +20,7 @@ class IntentType(str, Enum):
     TASK_SEARCH = "TASK_SEARCH"
     TASK_LIST = "TASK_LIST"
     TASK_ASSIGN = "TASK_ASSIGN"
+    TASK_ANALYZE = "TASK_ANALYZE"
 
     # Project Management
     PROJECT_CREATE = "PROJECT_CREATE"
@@ -148,6 +149,15 @@ INTENT_REGISTRY: Dict[IntentType, IntentDefinition] = {
         allowed_roles=MANAGERS_AND_ADMINS,
         tool_method="task_tool.assign_task",
         description="Assigns a task to a subordinate team member."
+    ),
+    IntentType.TASK_ANALYZE: IntentDefinition(
+        intent=IntentType.TASK_ANALYZE,
+        category="task",
+        risk=RiskLevel.READ,
+        requires_confirmation=False,
+        allowed_roles=ALL_ROLES,
+        tool_method="task_tool.analyze_tasks",
+        description="Analyzes the user's added tasks, workload, overdue deadlines, completion progress, and productivity."
     ),
 
     # Projects

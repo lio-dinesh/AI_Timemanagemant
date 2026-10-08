@@ -13,17 +13,48 @@ class AnalyticsTool:
     @staticmethod
     def get_summary(user, entities: EntitySchema) -> ExecutionResultSchema:
         today = timezone.localdate()
-        daily = ProductivityDaily.objects.filter(user=user, date=today).first()
+        from apps.analytics.services.aggregator import ProductivityAggregator
+        from apps.tasks.services.task import TaskService
+        from apps.tasks.models import TaskStatus
 
-        if daily:
-            score = round(daily.productivity_score, 1)
-            tracked = daily.tracked_hours
-            productive = daily.productive_hours
+        ProductivityAggregator.aggregate_user_date(user.id, today)
+        daily = ProductivityDaily.objects.filter(user=user, date=today).first()
+        tasks = list(TaskService.get_user_tasks(user))
+
+        total_tasks = len(tasks)
+        completed_tasks = len([t for t in tasks if t.status == TaskStatus.COMPLETED])
+        in_prog_tasks = len([t for t in tasks if t.status == TaskStatus.IN_PROGRESS])
+        overdue_tasks = len([t for t in tasks if t.deadline and t.deadline < timezone.now() and t.status in (TaskStatus.TODO, TaskStatus.IN_PROGRESS)])
+
+        score = round(daily.productivity_score, 1) if daily else 0.0
+        tracked = daily.tracked_hours if daily else 0.0
+        productive = daily.productive_hours if daily else 0.0
+
+        if total_tasks > 0 and tracked > 0:
+            msg = (
+                f"Today's Productivity Score: {score}/100. "
+                f"You tracked {tracked}h total ({productive}h productive). "
+                f"Tasks: {completed_tasks}/{total_tasks} completed ({in_prog_tasks} in progress, {overdue_tasks} overdue)."
+            )
+        elif total_tasks > 0:
+            msg = (
+                f"Task Productivity Score: {score}/100. "
+                f"Workload overview: {completed_tasks} of {total_tasks} task(s) completed ({in_prog_tasks} in progress, {overdue_tasks} overdue). "
+                f"Tip: Start a timer to log real-time focus work!"
+            )
+        elif daily and tracked > 0:
             msg = f"Today's Productivity Score: {score}/100. You tracked {tracked}h total ({productive}h focused productive work)."
-            data = {"score": score, "tracked_hours": tracked, "productive_hours": productive}
         else:
-            msg = "No productivity data recorded for today yet. Start a timer to track your sessions."
-            data = {"score": 0.0, "tracked_hours": 0.0}
+            msg = "No tasks or productivity data recorded for today yet. Start a timer or add a task to begin tracking!"
+
+        data = {
+            "score": score,
+            "tracked_hours": tracked,
+            "productive_hours": productive,
+            "total_tasks": total_tasks,
+            "completed_tasks": completed_tasks,
+            "overdue_tasks": overdue_tasks
+        }
 
         return ExecutionResultSchema(
             success=True,

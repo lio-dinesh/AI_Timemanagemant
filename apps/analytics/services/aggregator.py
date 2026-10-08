@@ -63,14 +63,53 @@ class ProductivityAggregator:
                 break_seconds += ev_sec
 
         # 3. Aggregate Tasks for User
-        tasks_total = Task.objects.filter(assigned_to_id=user_id, deadline__date=target_date).count()
-        tasks_completed = Task.objects.filter(assigned_to_id=user_id, completed_at__date=target_date, status=TaskStatus.COMPLETED).count()
-        tasks_overdue = Task.objects.filter(assigned_to_id=user_id, deadline__lt=day_end, status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS]).count()
+        all_user_tasks = list(Task.objects.filter(assigned_to_id=user_id))
+        relevant_tasks = [
+            t for t in all_user_tasks
+            if (t.deadline and t.deadline.date() == target_date)
+            or (t.completed_at and t.completed_at.date() == target_date)
+            or (t.created_at and t.created_at.date() == target_date)
+            or (t.status in (TaskStatus.TODO, TaskStatus.IN_PROGRESS))
+        ]
+        if not relevant_tasks:
+            relevant_tasks = all_user_tasks
+
+        tasks_total = len(relevant_tasks)
+        tasks_completed = len([t for t in relevant_tasks if t.status == TaskStatus.COMPLETED and (not t.completed_at or t.completed_at.date() <= target_date)])
+        tasks_overdue = len([t for t in relevant_tasks if t.deadline and t.deadline < day_end and t.status in (TaskStatus.TODO, TaskStatus.IN_PROGRESS)])
+
+        # Calculate productive work time from tasks if direct timer was not run
+        task_actual_sec = sum(t.actual_seconds for t in relevant_tasks)
+        task_completed_work_sec = sum(t.estimated_seconds for t in relevant_tasks if t.status == TaskStatus.COMPLETED)
+        task_progress_work_sec = sum(int(t.estimated_seconds * (t.progress / 100.0)) for t in relevant_tasks if t.status == TaskStatus.IN_PROGRESS)
+        task_work_sec = max(task_actual_sec, task_completed_work_sec + task_progress_work_sec)
+
+        if tracked_seconds == 0 and task_work_sec > 0:
+            tracked_seconds = task_work_sec
+            productive_seconds = task_work_sec
 
         # 4. Computed Scores
-        completion_rate = round((tasks_completed / tasks_total * 100), 2) if tasks_total > 0 else (100.0 if tasks_completed > 0 else 0.0)
+        if tasks_total > 0:
+            completion_rate = round((tasks_completed / tasks_total) * 100, 2)
+            avg_progress = round(sum(t.progress for t in relevant_tasks) / tasks_total, 2)
+            on_time_bonus = max(0, 15 - (tasks_overdue * 2))
+            task_score = min(100.0, round((completion_rate * 0.60) + (avg_progress * 0.25) + on_time_bonus, 2))
+        else:
+            completion_rate = 100.0 if tasks_completed > 0 else 0.0
+            task_score = 0.0
+
+        timer_score = round((productive_seconds / max(tracked_seconds, 1) * 100), 2) if entries_agg['total_duration'] else 0.0
+
+        if entries_agg['total_duration'] and tasks_total > 0:
+            productivity_score = round(0.5 * timer_score + 0.5 * task_score, 2)
+        elif entries_agg['total_duration']:
+            productivity_score = timer_score
+        elif tasks_total > 0:
+            productivity_score = task_score
+        else:
+            productivity_score = 0.0
+
         focus_rate = round(((focus_seconds + productive_seconds) / max(tracked_seconds, 1) * 100), 2) if tracked_seconds > 0 else 0.0
-        productivity_score = round((productive_seconds / max(tracked_seconds, 1) * 100), 2) if tracked_seconds > 0 else 0.0
 
         # Harmonic efficiency score
         if completion_rate > 0 and productivity_score > 0:

@@ -6,53 +6,56 @@
 <!-- NLP Command Bar -->
 <div class="nlp-command-box mb-4 shadow-sm">
   <div class="d-flex align-items-center justify-content-between mb-2">
-    <div class="fw-bold fs-5 text-white"><i class="bi bi-stars me-1 text-warning"></i> AI Assistant Command Bar</div>
+    <div class="fw-bold fs-5" style="color: #0369a1;"><i class="bi bi-stars me-1 text-primary"></i> AI Assistant Command Bar</div>
     <div class="d-flex align-items-center gap-2">
       <span id="voice-indicator" class="badge bg-danger text-white d-none"><i class="bi bi-record-circle-fill me-1 animate-pulse"></i> Listening...</span>
-      <span class="badge bg-light text-primary small">NLP Voice & Text</span>
+      <span class="badge bg-white text-primary border border-info border-opacity-25 small shadow-sm">NLP Voice & Text</span>
     </div>
   </div>
-  <p class="small text-white-50 mb-3">Speak or type in plain English, e.g. <em>"Schedule my database task tomorrow morning"</em>, <em>"Remind me 30 minutes before meeting"</em>, or <em>"Start timer"</em>.</p>
+  <p class="small mb-3" style="color: #0369a1; opacity: 0.9;">Speak or type in plain English, e.g. <em>"Analyze my tasks"</em>, <em>"Schedule my database task tomorrow morning"</em>, or <em>"Start timer"</em>.</p>
   
   <form id="nlp-form" hx-post="{% url 'nlp_command_prompt' %}" hx-target="#nlp-feedback" hx-swap="innerHTML" hx-indicator="#nlp-processing">
     {% csrf_token %}
     <input type="hidden" name="conversation_id" id="nlp-conversation-id" value="">
     <input type="hidden" name="source" id="nlp-source" value="TEXT">
     <div class="input-group input-group-lg shadow-sm">
-      <input type="text" name="command" id="nlp-input" class="form-control nlp-command-input fs-6" placeholder="Ask TimeSync anything..." autocomplete="off" style="background-color: #0f172a !important; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; caret-color: #38bdf8 !important;">
-      <button class="btn btn-outline-light px-3" type="button" id="btn-mic" title="Click to speak (Voice Recognition)" onclick="toggleVoiceRecognition()" style="background-color: #0f172a !important; border-color: rgba(165, 180, 252, 0.45) !important;">
+      <input type="text" name="command" id="nlp-input" class="form-control nlp-command-input fs-6" placeholder="Ask TimeSync anything... (e.g. 'Analyze my tasks')" autocomplete="off" style="background-color: #ffffff !important; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important; caret-color: #0284c7 !important; border: 1.5px solid #7dd3fc !important;">
+      <button class="btn px-3" type="button" id="btn-mic" title="Click to speak (Voice Recognition)" onclick="toggleVoiceRecognition()" style="background-color: #ffffff !important; border: 1.5px solid #7dd3fc !important; border-left: none !important; border-right: none !important; color: #0284c7 !important;">
         <i class="bi bi-mic-fill" id="mic-icon"></i>
       </button>
-      <button class="btn fw-semibold px-4 text-white d-flex align-items-center gap-2" type="submit" id="nlp-submit-btn" style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); border: none; border-radius: 0 0.75rem 0.75rem 0; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4); font-size: 0.95rem;">
+      <button class="btn fw-semibold px-4 text-white d-flex align-items-center gap-2" type="submit" id="nlp-submit-btn" style="background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%); border: none; border-radius: 0 0.75rem 0.75rem 0; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35); font-size: 0.95rem;">
         <i class="bi bi-send-fill"></i> Submit
       </button>
     </div>
   </form>
 
   <!-- Clean Processing State Indicator -->
-  <div id="nlp-processing" class="htmx-indicator mt-2 py-1 px-3 rounded-pill bg-white bg-opacity-10 text-white-50 d-inline-flex align-items-center gap-2 small">
+  <div id="nlp-processing" class="htmx-indicator mt-2 py-1 px-3 rounded-pill bg-white text-primary border border-info border-opacity-25 d-inline-flex align-items-center gap-2 small shadow-sm">
     <div class="spinner-border spinner-border-sm text-info" role="status" style="width: 0.9rem; height: 0.9rem;"></div>
-    <span>Understanding and working on it...</span>
+    <span>Analyzing and working on it...</span>
   </div>
 
   <div class="d-flex flex-wrap gap-2 mt-2 align-items-center">
-    <span class="small text-white-50 me-1" style="font-size: 0.75rem;">Suggestions:</span>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Remind me tomorrow at 10 PM to submit assignment');">
-      🔔 Remind tomorrow at 10 PM
+    <span class="small fw-semibold me-1" style="font-size: 0.75rem; color: #0369a1;">Suggestions:</span>
+    <button type="button" class="btn btn-sm py-1 px-2 rounded-pill small border nlp-chip" style="font-size: 0.75rem; background: rgba(255, 255, 255, 0.9); border-color: #7dd3fc !important; color: #0369a1; font-weight: 600;" onclick="setNlpCommand('Analyze my tasks');">
+      🔍 Analyze my tasks
     </button>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Schedule Python tomorrow morning');">
-      📅 Schedule Python tomorrow
-    </button>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('How productive was I today?');">
+    <button type="button" class="btn btn-sm py-1 px-2 rounded-pill small border nlp-chip" style="font-size: 0.75rem; background: rgba(255, 255, 255, 0.9); border-color: #7dd3fc !important; color: #0369a1; font-weight: 600;" onclick="setNlpCommand('How productive was I today?');">
       📊 How productive was I today?
     </button>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('What should I work on next?');">
+    <button type="button" class="btn btn-sm py-1 px-2 rounded-pill small border nlp-chip" style="font-size: 0.75rem; background: rgba(255, 255, 255, 0.9); border-color: #7dd3fc !important; color: #0369a1; font-weight: 500;" onclick="setNlpCommand('Remind me tomorrow at 10 PM to submit assignment');">
+      🔔 Remind tomorrow at 10 PM
+    </button>
+    <button type="button" class="btn btn-sm py-1 px-2 rounded-pill small border nlp-chip" style="font-size: 0.75rem; background: rgba(255, 255, 255, 0.9); border-color: #7dd3fc !important; color: #0369a1; font-weight: 500;" onclick="setNlpCommand('Schedule Python tomorrow morning');">
+      📅 Schedule Python tomorrow
+    </button>
+    <button type="button" class="btn btn-sm py-1 px-2 rounded-pill small border nlp-chip" style="font-size: 0.75rem; background: rgba(255, 255, 255, 0.9); border-color: #7dd3fc !important; color: #0369a1; font-weight: 500;" onclick="setNlpCommand('What should I work on next?');">
       💡 What should I work on next?
     </button>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Start my timer');">
+    <button type="button" class="btn btn-sm py-1 px-2 rounded-pill small border nlp-chip" style="font-size: 0.75rem; background: rgba(255, 255, 255, 0.9); border-color: #7dd3fc !important; color: #0369a1; font-weight: 500;" onclick="setNlpCommand('Start my timer');">
       ⏱️ Start timer
     </button>
-    <button type="button" class="btn btn-sm btn-outline-light py-0 px-2 rounded-pill small border-opacity-50 text-white" style="font-size: 0.75rem;" onclick="setNlpCommand('Help');">
+    <button type="button" class="btn btn-sm py-1 px-2 rounded-pill small border nlp-chip" style="font-size: 0.75rem; background: rgba(255, 255, 255, 0.9); border-color: #7dd3fc !important; color: #0369a1; font-weight: 500;" onclick="setNlpCommand('Help');">
       ❓ Help
     </button>
   </div>

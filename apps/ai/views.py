@@ -76,21 +76,25 @@ def nlp_command_prompt(request):
         candidates = result.get('candidates')
 
         if requires_conf:
-            alert_bg = "background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.35); color: #92400e;"
+            alert_bg = "background: #fffbeb; border: 1px solid rgba(245, 158, 11, 0.4); color: #92400e;"
             icon_cls = "bi-shield-exclamation text-warning"
         elif not is_success:
-            alert_bg = "background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); color: #991b1b;"
+            alert_bg = "background: #fef2f2; border: 1px solid rgba(239, 68, 68, 0.35); color: #991b1b;"
             icon_cls = "bi-exclamation-triangle-fill text-danger"
         elif candidates:
-            alert_bg = "background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.35); color: #3730a3;"
+            alert_bg = "background: #eff6ff; border: 1px solid rgba(59, 130, 246, 0.35); color: #1e40af;"
             icon_cls = "bi-question-circle-fill text-primary"
         else:
-            alert_bg = "background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.35); color: #065f46;"
-            icon_cls = "bi-stars text-success"
+            alert_bg = "background: #ffffff; border: 1.5px solid rgba(56, 189, 248, 0.55); color: #0f172a; box-shadow: 0 4px 14px rgba(14, 165, 233, 0.12);"
+            icon_cls = "bi-stars text-primary"
 
-        msg = result.get('message', '').replace('\n', '<br>')
+        import re
+        msg = result.get('message', '')
+        msg = re.sub(r'\*\*(.*?)\*\*', r'<strong>\1</strong>', msg)
+        msg = re.sub(r'\*(.*?)\*', r'<em>\1</em>', msg)
+        msg = msg.replace('\n', '<br>')
         html = f"""
-        <div class='p-3 mb-2 rounded-3 shadow-sm' style='{alert_bg} font-size: 0.93rem; line-height: 1.5;'>
+        <div class='p-3 mb-2 rounded-3 shadow-sm' style='{alert_bg} font-size: 0.93rem; line-height: 1.55;'>
             <div class='d-flex align-items-start gap-2'>
                 <i class='bi {icon_cls} fs-5 mt-0 flex-shrink-0'></i>
                 <div class='flex-grow-1'>

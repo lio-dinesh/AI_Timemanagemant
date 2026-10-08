@@ -18,17 +18,21 @@ class ReportingService:
         Fast dashboard rollup using today's productivity_daily record.
         """
         today = timezone.localdate()
-        today_record = ProductivityDaily.objects.filter(user=user, date=today).first()
+        from apps.analytics.services.aggregator import ProductivityAggregator
+        today_record = ProductivityAggregator.aggregate_user_date(user.id, today)
 
         # Recent 7 days for trend charts
         past_7_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+        for d in past_7_days:
+            ProductivityAggregator.aggregate_user_date(user.id, d)
+
         daily_records = list(ProductivityDaily.objects.filter(user=user, date__in=past_7_days).order_by('date'))
         record_map = {r.date: r for r in daily_records}
 
         trend_labels = [d.strftime('%a %d') for d in past_7_days]
-        trend_scores = [record_map[d].productivity_score if d in record_map else 0.0 for d in past_7_days]
-        trend_productive_hours = [record_map[d].productive_hours if d in record_map else 0.0 for d in past_7_days]
-        trend_tracked_hours = [record_map[d].tracked_hours if d in record_map else 0.0 for d in past_7_days]
+        trend_scores = [round(record_map[d].productivity_score, 1) if d in record_map else 0.0 for d in past_7_days]
+        trend_productive_hours = [round(record_map[d].productive_hours, 1) if d in record_map else 0.0 for d in past_7_days]
+        trend_tracked_hours = [round(record_map[d].tracked_hours, 1) if d in record_map else 0.0 for d in past_7_days]
 
         # Tasks overview
         tasks_pending = Task.objects.filter(assigned_to=user, status__in=[TaskStatus.TODO, TaskStatus.IN_PROGRESS]).count()

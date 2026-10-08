@@ -145,6 +145,7 @@ class NLPParser:
                 "- TASK_LIST: listing/showing tasks (e.g. 'show my tasks for tomorrow', 'list my tasks')\n"
                 "- TASK_SEARCH: finding a specific task by query\n"
                 "- TASK_ASSIGN: delegating a task to another user\n"
+                "- TASK_ANALYZE: analyzing user tasks, workload, overdue deadlines, and progress (e.g. 'analyze my tasks', 'analyze', 'analize', 'task analysis')\n"
                 "- SCHEDULE_CREATE: booking/scheduling a focus block, event, or meeting (e.g. 'schedule Python for tomorrow morning', 'block 2 hours for deep work')\n"
                 "- SCHEDULE_UPDATE: rescheduling/moving an event or task (e.g. 'move it to Friday', 'make it 6pm instead', 'reschedule to 3pm')\n"
                 "- SCHEDULE_DELETE: cancelling a scheduled event\n"
