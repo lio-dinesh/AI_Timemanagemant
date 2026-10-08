@@ -84,11 +84,11 @@ h6 {
 
 .app-sidebar {
   width: var(--sidebar-width);
-  background: var(--glass-dark-bg) !important;
-  backdrop-filter: var(--glass-dark-blur);
-  -webkit-backdrop-filter: var(--glass-dark-blur);
-  border-right: 1px solid var(--glass-dark-border);
-  box-shadow: var(--glass-dark-shadow);
+  background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 45%, #bae6fd 100%) !important;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border-right: 1px solid rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 4px 0 25px rgba(14, 165, 233, 0.12), inset -1px 0 0 rgba(255, 255, 255, 0.7) !important;
   height: 100vh;
   position: fixed;
   top: 0;
@@ -98,6 +98,7 @@ h6 {
   flex-direction: column;
   overflow: hidden;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #0f172a;
 }
 
 .sidebar-backdrop {
@@ -107,7 +108,7 @@ h6 {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.6);
+  background: rgba(15, 23, 42, 0.5);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 1035;
@@ -124,13 +125,25 @@ h6 {
     left: 0 !important;
     width: 280px !important;
     height: 100vh !important;
-    z-index: 1050 !important;
+    z-index: 1080 !important;
     transform: translateX(-100%);
-    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.35) !important;
+    box-shadow: 10px 0 30px rgba(14, 165, 233, 0.25) !important;
   }
 
   .app-sidebar.show {
     transform: translateX(0) !important;
+  }
+
+  .sidebar-backdrop {
+    z-index: 1075 !important;
+  }
+
+  body.sidebar-open .main-content > .navbar {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
   }
 
   .main-content {
@@ -139,12 +152,46 @@ h6 {
   }
 }
 
+/* Sidebar Brand Styling */
+.app-sidebar .brand-title {
+  color: #0c4a6e !important;
+  font-weight: 700;
+}
+
+.app-sidebar .brand-title .text-gradient-cyan {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.app-sidebar .brand-subtitle {
+  color: #0284c7 !important;
+  font-weight: 600;
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  opacity: 0.95;
+}
+
+.app-sidebar .sidebar-divider {
+  border: 0;
+  border-top: 1px solid rgba(56, 189, 248, 0.35) !important;
+  opacity: 1 !important;
+}
+
+.app-sidebar .sidebar-heading {
+  color: #0369a1 !important;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  font-weight: 700 !important;
+  opacity: 0.9;
+}
+
 .app-sidebar .sidebar-nav {
   overflow-y: auto;
   flex: 1 1 auto;
   min-height: 0;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  scrollbar-color: rgba(2, 132, 199, 0.25) transparent;
 }
 
 .app-sidebar .sidebar-nav::-webkit-scrollbar {
@@ -152,12 +199,12 @@ h6 {
 }
 
 .app-sidebar .sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(2, 132, 199, 0.25);
   border-radius: 4px;
 }
 
 .app-sidebar .nav-link {
-  color: #94a3b8;
+  color: #334155 !important;
   padding: 0.65rem 1.1rem;
   border-radius: 0.75rem;
   margin: 0.25rem 0.75rem;
@@ -172,29 +219,37 @@ h6 {
 
 .app-sidebar .nav-link i {
   font-size: 1.05rem;
-  opacity: 0.85;
+  color: #0284c7;
+  opacity: 0.9;
   transition: transform 180ms ease, color 180ms ease;
 }
 
 .app-sidebar .nav-link:hover:not(.active) {
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transform: translateX(2px);
+  color: #0c4a6e !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.12);
+  transform: translateX(3px);
 }
 
 .app-sidebar .nav-link:hover:not(.active) i {
-  color: #818cf8;
+  color: #0284c7;
+  transform: scale(1.1);
 }
 
-/* Refined Glass Pill Active Navigation */
+/* Refined Light-Blue Pill Active Navigation */
 .app-sidebar .nav-link.active {
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.26) 0%, rgba(99, 102, 241, 0.14) 100%) !important;
+  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%) !important;
   color: #ffffff !important;
-  font-weight: 600;
-  border: 1px solid rgba(129, 140, 248, 0.38) !important;
-  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.18) !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
   position: relative;
+}
+
+.app-sidebar .nav-link.active i {
+  color: #ffffff !important;
+  opacity: 1 !important;
 }
 
 .app-sidebar .nav-link.active::before {
@@ -204,18 +259,48 @@ h6 {
   top: 50%;
   transform: translateY(-50%);
   width: 4px;
-  height: 18px;
+  height: 20px;
   border-radius: 4px;
-  background: #818cf8;
-  box-shadow: 0 0 10px #818cf8;
+  background: #0284c7;
+  box-shadow: 0 0 10px rgba(2, 132, 199, 0.6);
 }
 
+/* Sidebar Footer */
 .app-sidebar .sidebar-footer {
   flex-shrink: 0;
-  background: rgba(15, 23, 42, 0.75) !important;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.65) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 0 -4px 16px rgba(14, 165, 233, 0.06);
+}
+
+.app-sidebar .sidebar-footer .sidebar-user-name {
+  color: #0f172a !important;
+}
+
+.app-sidebar .sidebar-footer .sidebar-user-role {
+  color: #0284c7 !important;
+  font-weight: 500;
+}
+
+.app-sidebar .sidebar-footer .sidebar-avatar {
+  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%) !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+}
+
+.app-sidebar .sidebar-footer .btn-logout {
+  background: rgba(254, 226, 226, 0.85) !important;
+  border: 1px solid rgba(248, 113, 113, 0.4) !important;
+  color: #dc2626 !important;
+  transition: all 0.2s ease;
+}
+
+.app-sidebar .sidebar-footer .btn-logout:hover {
+  background: #ef4444 !important;
+  border-color: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
 }
 
 /* ==========================================================================

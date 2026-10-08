@@ -1,8 +1,8 @@
 {% load static %}
-<div class="app-sidebar d-flex flex-column text-white">
+<div class="app-sidebar d-flex flex-column">
   <!-- Brand Header -->
   <div class="p-3 pb-2 flex-shrink-0 d-flex align-items-center justify-content-between">
-    <a href="{% url 'user_dashboard' %}" class="d-flex align-items-center text-white text-decoration-none px-1 brand-header-link">
+    <a href="{% url 'user_dashboard' %}" class="d-flex align-items-center text-decoration-none px-1 brand-header-link">
       <div class="logo-breathing-wrap sidebar-logo-wrap me-2">
         <div class="logo-breathing-halo"></div>
         <img src="{% static 'img/logo.png' %}?v=3" alt="AI TimeSync" class="logo-breathing-img sidebar-logo" onerror="this.onerror=null; this.src='/static/img/logo.png';" />
@@ -13,11 +13,11 @@
       </div>
     </a>
     <!-- Mobile Close Drawer Button -->
-    <button type="button" class="btn btn-sm btn-link text-white-50 p-1 d-lg-none" id="sidebarCloseBtn" aria-label="Close Navigation" style="font-size: 1.25rem;">
+    <button type="button" class="btn btn-sm btn-link text-secondary p-1 d-lg-none" id="sidebarCloseBtn" aria-label="Close Navigation" style="font-size: 1.25rem;">
       <i class="bi bi-x-lg"></i>
     </button>
   </div>
-  <hr class="border-secondary opacity-25 mt-0 mb-0 mx-3">
+  <hr class="sidebar-divider mt-0 mb-0 mx-3">
 
   <!-- Scrollable Navigation Area -->
   <div class="sidebar-nav px-3 py-2">
@@ -72,9 +72,9 @@
       </li>
 
       {% if user.is_manager_role %}
-        <hr class="border-secondary opacity-25 my-2">
+        <hr class="sidebar-divider my-2 mx-3">
         <li class="nav-item">
-          <span class="text-uppercase text-muted px-3 small fw-bold">Manager</span>
+          <span class="text-uppercase sidebar-heading px-3 small fw-bold">Manager</span>
         </li>
         <li>
           <a href="{% url 'manager_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}">
@@ -84,9 +84,9 @@
       {% endif %}
 
       {% if user.is_admin_role %}
-        <hr class="border-secondary opacity-25 my-2">
+        <hr class="sidebar-divider my-2 mx-3">
         <li class="nav-item">
-          <span class="text-uppercase text-muted px-3 small fw-bold">Administration</span>
+          <span class="text-uppercase sidebar-heading px-3 small fw-bold">Administration</span>
         </li>
         <li>
           <a href="{% url 'admin_dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'admin_dashboard' %}active{% endif %}">
@@ -103,18 +103,18 @@
   </div>
 
   <!-- Pinned Sidebar User Footer with Visible Sign Out Button -->
-  <div class="sidebar-footer p-3 border-top border-secondary border-opacity-25 bg-dark bg-opacity-50">
+  <div class="sidebar-footer p-3">
     <div class="d-flex align-items-center justify-content-between">
-      <a href="{% url 'profile' %}" class="d-flex align-items-center text-white text-decoration-none text-truncate me-2" title="Profile & Preferences">
-        <div class="avatar bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width: 34px; height: 34px; font-weight: 600;">
+      <a href="{% url 'profile' %}" class="d-flex align-items-center text-decoration-none text-truncate me-2" title="Profile & Preferences">
+        <div class="avatar sidebar-avatar text-white rounded-circle d-flex align-items-center justify-content-center me-2 flex-shrink-0" style="width: 34px; height: 34px; font-weight: 600;">
           {{ user.first_name|default:user.username|slice:":1"|upper }}
         </div>
         <div class="d-flex flex-column text-truncate" style="max-width: 120px;">
-          <span class="fw-semibold small text-truncate">{{ user.get_full_name|default:user.username }}</span>
-          <span class="text-secondary small" style="font-size: 0.75rem;">{{ user.role }}</span>
+          <span class="fw-semibold small text-truncate sidebar-user-name">{{ user.get_full_name|default:user.username }}</span>
+          <span class="sidebar-user-role small" style="font-size: 0.75rem;">{{ user.role }}</span>
         </div>
       </a>
-      <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger p-1 px-2 d-flex align-items-center gap-1 text-danger border-danger-subtle" title="Sign Out">
+      <a href="{% url 'logout' %}" class="btn btn-sm btn-logout p-1 px-2 d-flex align-items-center gap-1" title="Sign Out">
         <i class="bi bi-box-arrow-right fs-6"></i>
       </a>
     </div>
